@@ -1,0 +1,18 @@
+{
+  "name": "user-d15c0rd",
+  "module": "index.ts",
+  "devDependencies": {
+    "@types/bun": "latest",
+    "wrangler": "^3.67.1"
+  },
+  "peerDependencies": {
+    "typescript": "^5.0.0"
+  },
+  "scripts": {
+    "dev": "bun --watch index.ts"
+  },
+  "type": "module",
+  "dependencies": {
+    "discord.js": "^14.15.3"
+  }
+}
