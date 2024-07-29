@@ -1,0 +1,16 @@
+{
+    "discord": {
+        "client_id": "",
+        "token": ""
+    },
+    "youtube": {
+        "client_id": "",
+        "client_secret": "",
+        "redirect_uri": ""
+    },
+    "soundcloud": {
+        "client_id": "",
+        "client_secret": "",
+        "redirect_uri": ""
+    }
+}
