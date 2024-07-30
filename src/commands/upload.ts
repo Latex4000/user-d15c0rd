@@ -47,7 +47,7 @@ const command: Command = {
         const image = interaction.options.getAttachment("image");
         const title = interaction.options.getString("title");
         const tags = interaction.options.getString("tags")?.split(",").map(tag => tag.trim());
-        const attribution = interaction.options.getBoolean("attribution") ?? false;
+        const attribution = interaction.options.getString("attribution") || "";
         
         if (audio === null || image === null || title === null) {
             await respond(interaction, { content: "You must provide both an audio and image file, and a title", ephemeral: true });
