@@ -1,9 +1,35 @@
-import { ChatInputCommandInteraction, EmbedData, SlashCommandBuilder } from "discord.js";
-import * as config from "../../config.json";
+import { ChatInputCommandInteraction, SlashCommandBuilder } from "discord.js";
 import { Command } from ".";
 import { unlink } from "node:fs/promises";
 import { hash } from "bun";
 import { respond } from "..";
+import { uploadYoutube } from "../oauth/youtube";
+
+async function uploadToYoutubeAndSoundcloud (
+    interaction: ChatInputCommandInteraction,
+    videoPath: string,
+    title: string,
+    tags: string[],
+    attribution: string
+) {
+    const ytData = await uploadYoutube(title, `Attribution: ${attribution}\n\nTags: ${tags.length > 0 ? tags.join(", ") : "N/A"}`, tags, videoPath);
+    if (!ytData.status || ytData.status?.uploadStatus !== "uploaded") {
+        await respond(interaction, {
+            content: `An error occurred while uploading the video\n\`\`\`\n${JSON.stringify(ytData, null, 2)}\n\`\`\``,
+            ephemeral: true
+        });
+        return;
+    }
+    const youtubeUrl = `https://www.youtube.com/watch?v=${ytData.id}`;
+
+    await respond(interaction, {
+        content: `Successfully uploaded the video to YouTube! ${youtubeUrl}`,
+        ephemeral: true
+    })
+
+    // Upload to SoundCloud
+    // const scData = await uploadSoundcloud(title, `Attribution: ${attribution}\n\nTags: ${tags ? tags.join(", ") : "N/A"}`, tags || [], videoPath);
+}
 
 const command: Command = {
     data: new SlashCommandBuilder()
@@ -36,7 +62,7 @@ const command: Command = {
         .addStringOption(option =>
             option
                 .setName("attribution")
-                .setDescription("To attribute the song to an alias of yours in the description (Default/Empty: No attribution)")
+                .setDescription("Who should the song be attributed to in the description? (Default/Empty: No attribution)")
                 .setRequired(false)
         )
         .setDMPermission(false),
@@ -46,7 +72,7 @@ const command: Command = {
         const audio = interaction.options.getAttachment("audio");
         const image = interaction.options.getAttachment("image");
         const title = interaction.options.getString("title");
-        const tags = interaction.options.getString("tags")?.split(",").map(tag => tag.trim());
+        const tags = interaction.options.getString("tags")?.split(",").map(tag => tag.trim()) || [];
         const attribution = interaction.options.getString("attribution") || "";
         
         if (audio === null || image === null || title === null) {
@@ -83,35 +109,34 @@ const command: Command = {
         // Wait for the process to finish
         const exitCode = await proc.exited;
         if (exitCode !== 0) {
-            await respond(interaction, { content: "An error occurred while processing the files", ephemeral: true });
+            await respond(interaction, { 
+                content: `An error occurred while processing the files. Exit code: ${exitCode}`,
+                ephemeral: true,
+            });
             return;
         }
 
-        const message = await respond(interaction, {
-            content: title,
-            files: [videoPath],
-        });
-        
-        // Add tags to the message
-        let text = title;
-        if (tags)
-            text += `\nTags: ${tags.join(", ")}`;
-        
-        // Add attribution to the message
-        if (attribution)
-            text += `\nUploaded by <@${interaction.user.id}>`;
-
-        // Edit the message to include tags and attribution
-        await message.edit({
-            content: text,
-        });
+        // Upload the video to YouTube
+        try {
+            await uploadToYoutubeAndSoundcloud(interaction, videoPath, title, tags, attribution);
+        } catch (err) {
+            await respond(interaction, {
+                content: `An error occurred while uploading the video\n\`\`\`\n${err}\n\`\`\``,
+                ephemeral: true
+            });
+            return;
+        }
         
         // Delete the temporary video file and the downloaded files
-        await Promise.all([
-            unlink(videoPath),
-            unlink(audioPath),
-            unlink(imagePath),
-        ])
+        try {
+            await Promise.all([
+                unlink(videoPath),
+                unlink(audioPath),
+                unlink(imagePath),
+            ]);
+        } catch (err) {
+            console.error("Failed to delete temporary files", err);
+        }
     },
 }
 
