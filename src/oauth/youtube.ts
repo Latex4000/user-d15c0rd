@@ -24,11 +24,17 @@ router.get("/", async ({ query }) => {
             return new Response("Failed to write token to file", { status: 500 });
         }
     }
-    uploadYoutube("Test", "Test", [], "test.mp4");
+    // uploadYoutube("Test", "Test", [], "test.mp4");
     return new Response("Successfully authenticated");
 });
 router.all("*", () => new Response("Not found", { status: 404 }));
 
+Bun.serve({
+    fetch: router.fetch,
+    port,
+});
+
+// The actual functions
 export async function getYoutubeAccessToken() {
     const tokenFile = Bun.file("token.json");
     if (await tokenFile.exists()) {
@@ -68,11 +74,6 @@ export async function uploadYoutube(title: string, description: string, tags: st
     });
     return res.data;
 }
-
-Bun.serve({
-    fetch: router.fetch,
-    port,
-});
 
 // getYoutubeAccessToken()
 //     .then((url) => {
