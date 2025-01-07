@@ -104,7 +104,7 @@ const command: Command = {
         
         // Run ffmpeg to create a video file
         const videoPath = `./tmp/${interaction.user.id}.mp4`;
-        const proc = Bun.spawn(["ffmpeg", "-loop", "1", "-i", imagePath, "-i", audioPath, "-tune", "stillimage", "-shortest", "-y", videoPath]);
+        const proc = Bun.spawn(["ffmpeg", "-loop", "1", "-i", imagePath, "-i", audioPath, "-vf", "scale='min(1280,iw)':-2,format=yuv420p", "-c:v", "libx264", "-preset", "medium", "-profile:v", "main", "-c:a", "aac", "-shortest", "-movflags", "+faststart", videoPath]);
 
         // Wait for the process to finish
         const exitCode = await proc.exited;
