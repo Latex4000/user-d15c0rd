@@ -1,4 +1,9 @@
 {
+    "collective": {
+        "name": "",
+        "name_condensed": "",
+        "site_url": ""
+    },
     "discord": {
         "client_id": "",
         "token": "",
