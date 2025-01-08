@@ -131,7 +131,7 @@ add the webring to your site by adding the following HTML to your site:
         <a href="${config.collective.site_url}" id="${config.collective.name_condensed}Random" title="Random">Random</a>
         <a href="${config.collective.site_url}" id="${config.collective.name_condensed}Next" title="Next">→</a>
     </div>
-    <script id="${config.collective.name_condensed}Webring" src="${config.collective.site_url}/webring.min.js" data-alias="vinxis"></script>
+    <script id="${config.collective.name_condensed}Webring" src="${config.collective.site_url}/webring.min.js" data-alias="${encodedAlias}"></script>
 </div>
 \`\`\`
 and run \`/confirm\` to fully add your site to the webring` });
