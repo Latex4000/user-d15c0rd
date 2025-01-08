@@ -49,7 +49,8 @@ const command: Command = {
 
         // Check if the site URL is valid
         try {
-            new URL(site);
+            const url = new URL(site);
+            if (url.protocol !== 'http' && url.protocol !== 'https') throw new Error();
         } catch {
             await interaction.followUp({ content: "The site URL is invalid", ephemeral: true });
             return;
