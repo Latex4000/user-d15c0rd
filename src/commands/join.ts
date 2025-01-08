@@ -129,7 +129,7 @@ add the webring to your site by adding the following HTML to your site:
     <a href="${config.collective.site_url}" title="Collective">${config.collective.name}</a>
     <div class="${config.collective.name_condensed}WebringButtons">
         <a href="${config.collective.site_url}" id="${config.collective.name_condensed}Prev" title="Previous">←</a>
-        <a href="${config.collective.site_url}" id="${config.collective.name_condensed}Random" title="Random">Random</a>
+        <a href="#" id="${config.collective.name_condensed}Random" title="Random">Random</a>
         <a href="${config.collective.site_url}" id="${config.collective.name_condensed}Next" title="Next">→</a>
     </div>
     <script id="${config.collective.name_condensed}Webring" src="${config.collective.site_url}/webring.min.js" data-alias="${encodedAlias}"></script>
