@@ -1,7 +1,8 @@
-import { ChatInputCommandInteraction, SlashCommandBuilder } from "discord.js";
+import { ChatInputCommandInteraction, MessageReaction, SlashCommandBuilder, User } from "discord.js";
 import { Command } from ".";
-import { unlink } from "node:fs/promises";
+import { unlink, writeFile } from "node:fs/promises";
 import * as config from "../../config.json";
+import { exec } from "node:child_process";
 
 interface Member {
     discord: string;
@@ -85,7 +86,7 @@ const command: Command = {
             await update.react("✅");
             await update.react("❌");
 
-            const filter = (reaction, user) => user.id === interaction.user.id && ["✅", "❌"].includes(reaction.emoji.name);
+            const filter = (reaction: MessageReaction, user: User) => user.id === interaction.user.id && ["✅", "❌"].includes(reaction.emoji.name || "");
             const collected = await update.awaitReactions({ filter, max: 1, time: 60000 });
 
             if (collected.size === 0) {
@@ -113,16 +114,16 @@ const command: Command = {
 
         // Save JSON Date to a file, upload it using Neocities CLI, and then delete the file
         const jsonPath = "./tmp/members.json";
-        await Bun.write(jsonPath, JSON.stringify(data, null, 4));
-        const proc = Bun.spawn(["neocities", "upload", "members.json"], { cwd: "./tmp" });
-        
-        const exitCode = await proc.exited;
-        if (exitCode !== 0) {
-            await interaction.followUp({ content: `An error occurred while uploading the file. Exit code: ${exitCode}`, ephemeral: true });
-            return;
-        }
+        await writeFile(jsonPath, JSON.stringify(data, null, 4));
+        exec(`neocities upload members.json`, { cwd: "./tmp" }, (err, stdout, stderr) => {
+            if (err) {
+                console.error(err);
+                interaction.followUp({ content: `An error occurred while uploading the file. Exit code: ${err.code}`, ephemeral: true });
+                return;
+            }
 
-        await interaction.followUp({ content: i !== -1 ? `site updated\nyou do not need to confirm again` : `site added to the webring
+            unlink(jsonPath);
+            interaction.followUp({ content: i !== -1 ? `site updated\nyou do not need to confirm again` : `site added to the webring
 add the webring to your site by adding the following HTML to your site:
 \`\`\`html
 <div class="${config.collective.name_condensed}Webring">
@@ -136,10 +137,7 @@ add the webring to your site by adding the following HTML to your site:
 </div>
 \`\`\`
 and run \`/confirm\` to fully add your site to the webring` });
-
-        // Delete the temporary JSON file
-        await unlink(jsonPath);
-        return;
+        });
     },
 }
 

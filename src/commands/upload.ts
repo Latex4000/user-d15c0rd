@@ -1,9 +1,10 @@
 import { ChatInputCommandInteraction, SlashCommandBuilder } from "discord.js";
 import { Command } from ".";
-import { unlink } from "node:fs/promises";
-import { hash } from "bun";
+import { unlink, writeFile } from "node:fs/promises";
 import { respond } from "..";
 import { uploadYoutube } from "../oauth/youtube";
+import { exec } from "node:child_process";
+import { createHash } from "node:crypto";
 
 async function uploadToYoutubeAndSoundcloud (
     interaction: ChatInputCommandInteraction,
@@ -93,50 +94,48 @@ const command: Command = {
         }
 
         // Download files and save them with a hashed name
-        const audioPath = `./tmp/${hash(audio.url)}${audio.url.endsWith(".mp3") ? ".mp3" : ".wav"}`;
-        const imagePath = `./tmp/${hash(image.url)}${image.url.endsWith(".png") ? ".png" : ".jpg"}`;
-        await fetch(audio.url).then(res => res.blob()).then(blob => {
-            Bun.write(audioPath, blob);
+        const audioPath = `./tmp/${createHash("sha256").update(audio.url).digest("hex")}${audio.url.endsWith(".mp3") ? ".mp3" : ".wav"}`;
+        const imagePath = `./tmp/${createHash("sha256").update(image.url).digest("hex")}${image.url.endsWith(".png") ? ".png" : ".jpg"}`;
+        await fetch(audio.url).then(res => res.blob()).then(async blob => {
+            await writeFile(audioPath, Buffer.from(await blob.arrayBuffer()));
         });
-        await fetch(image.url).then(res => res.blob()).then(blob => {
-            Bun.write(imagePath, blob);
+        await fetch(image.url).then(res => res.blob()).then(async blob => {
+            await writeFile(imagePath, Buffer.from(await blob.arrayBuffer()));
         });
         
         // Run ffmpeg to create a video file
         const videoPath = `./tmp/${interaction.user.id}.mp4`;
-        const proc = Bun.spawn(["ffmpeg", "-loop", "1", "-i", imagePath, "-i", audioPath, "-vf", "scale='min(1280,iw)':-2,format=yuv420p", "-c:v", "libx264", "-preset", "medium", "-profile:v", "main", "-c:a", "aac", "-shortest", "-movflags", "+faststart", videoPath]);
+        exec(`ffmpeg -loop 1 -i "${imagePath}" -i "${audioPath}" -vf "scale='min(1280,iw)':-2,format=yuv420p" -c:v libx264 -preset medium -profile:v main -c:a aac -shortest -movflags +faststart ${videoPath}`, async (err, stdout, stderr) => {
+            if (err) {
+                await respond(interaction, { 
+                    content: `An error occurred while processing the files\n\`\`\`\n${stderr}\n\`\`\``,
+                    ephemeral: true,
+                });
+                return;
+            }
 
-        // Wait for the process to finish
-        const exitCode = await proc.exited;
-        if (exitCode !== 0) {
-            await respond(interaction, { 
-                content: `An error occurred while processing the files. Exit code: ${exitCode}`,
-                ephemeral: true,
-            });
-            return;
-        }
-
-        // Upload the video to YouTube
-        try {
-            await uploadToYoutubeAndSoundcloud(interaction, videoPath, title, tags, attribution);
-        } catch (err) {
-            await respond(interaction, {
-                content: `An error occurred while uploading the video\n\`\`\`\n${err}\n\`\`\``,
-                ephemeral: true
-            });
-            return;
-        }
-        
-        // Delete the temporary video file and the downloaded files
-        try {
-            await Promise.all([
-                unlink(videoPath),
-                unlink(audioPath),
-                unlink(imagePath),
-            ]);
-        } catch (err) {
-            console.error("Failed to delete temporary files", err);
-        }
+            // Upload the video to YouTube
+            try {
+                await uploadToYoutubeAndSoundcloud(interaction, videoPath, title, tags, attribution);
+            } catch (err) {
+                await respond(interaction, {
+                    content: `An error occurred while uploading the video\n\`\`\`\n${err}\n\`\`\``,
+                    ephemeral: true
+                });
+                return;
+            }
+            
+            // Delete the temporary video file and the downloaded files
+            try {
+                await Promise.all([
+                    unlink(videoPath),
+                    unlink(audioPath),
+                    unlink(imagePath),
+                ]);
+            } catch (err) {
+                console.error("Failed to delete temporary files", err);
+            }
+        });
     },
 }
 

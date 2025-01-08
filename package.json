@@ -1,7 +1,21 @@
 {
-  "dependencies": { "bun": "^1.1.21", "discord.js": "^14.15.3", "googleapis": "^140.0.1", "itty-router": "^5.0.17", "limiter": "^2.1.0", "readline": "^1.3.0" },
-  "scripts": { "dev": "bun --watch src/index.ts" },
-  "devDependencies": {
-    "@types/bun": "^1.1.6"
+  "name": "user-d15c0rd",
+  "version": "1.0.0",
+  "description": "A discord bot that allows you to upload an image with audio and a title to Youtube and Soundcloud",
+  "main": "index.js",
+  "scripts": {
+    "build": "tsc --resolveJsonModule --outDir ./build",
+    "start": "node build/index.js"
+  },
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@whatwg-node/server": "^0.9.65",
+    "discord.js": "^14.17.3",
+    "googleapis": "^144.0.0",
+    "itty-router": "^5.0.18",
+    "limiter": "^2.1.0",
+    "readline": "^1.3.0",
+    "typescript": "^5.7.3"
   }
 }

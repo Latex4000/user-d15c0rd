@@ -12,8 +12,8 @@ const rest = new REST({ version: "10" }).setToken(config.discord.token);
         { body: commands.map(c => c.data) }
     );
 })()
-    .then(() => console.log(`Successfully refreshed slash (/) command`))
-    .catch((error) => console.error("An error has occurred in refreshing slash (/) command", error));
+    .then(() => console.log(`Successfully refreshed slash (/) commands`))
+    .catch((error) => console.error("An error has occurred in refreshing slash (/) commands", error));
 
 const discordClient = new Client({
     intents: [
@@ -58,7 +58,8 @@ discordClient.on("interactionCreate", async (interaction) => {
             return;
 
         if (err.code === 50027) {
-            await interaction.channel?.send(`Ur command timed out Lol try again <@${interaction.user.id}>`);
+            if (interaction.channel?.isSendable())
+                await interaction.channel.send(`Ur command timed out Lol try again <@${interaction.user.id}>`);
             await interaction.deleteReply();
         } else {
             await respond(interaction, { content: `The command was unable to be fulfilled.\nA discord error (code \`${err.code}\`) was received:\n\`\`\`\n${err.message}\n\`\`\`` });
