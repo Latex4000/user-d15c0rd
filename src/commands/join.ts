@@ -124,10 +124,15 @@ const command: Command = {
         await interaction.followUp({ content: i !== -1 ? `site updated\nyou do not need to confirm again` : `site added to the webring
 add the webring to your site by adding the following HTML to your site:
 \`\`\`html
-<a href="${config.collective.site_url}" id="${config.collective.name_condensed}Prev" title="Previous">Previous</a>
-<a href="${config.collective.site_url}" id="${config.collective.name_condensed}Random" title="Random">Random</a>
-<a href="${config.collective.site_url}" id="${config.collective.name_condensed}Next" title="Next">Next</a>
-<script id="${config.collective.name_condensed}Webring" src="${config.collective.site_url}/webring.min.js" data-alias="${encodedAlias}"></script>
+<div class="${config.collective.name_condensed}Webring">
+    <a href="${config.collective.site_url}" title="Collective">${config.collective.name}</a>
+    <div class="${config.collective.name_condensed}WebringButtons">
+        <a href="${config.collective.site_url}" id="${config.collective.name_condensed}Prev" title="Previous">←</a>
+        <a href="${config.collective.site_url}" id="${config.collective.name_condensed}Random" title="Random">Random</a>
+        <a href="${config.collective.site_url}" id="${config.collective.name_condensed}Next" title="Next">→</a>
+    </div>
+    <script id="${config.collective.name_condensed}Webring" src="${config.collective.site_url}/webring.min.js" data-alias="vinxis"></script>
+</div>
 \`\`\`
 and run \`/confirm\` to fully add your site to the webring` });
 
