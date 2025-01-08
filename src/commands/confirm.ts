@@ -42,15 +42,18 @@ const command: Command = {
 
         data[i].addedRingToSite = true;
 
-        // Save JSON Date to a file, upload it using Neocities CLI, and then delete the file
+        // Save JSON Date to a file, upload it using Neocities CLI, send the JSON file to discord, and then delete the file
         const jsonPath = "./tmp/members.json";
         await writeFile(jsonPath, JSON.stringify(data, null, 4));
-        exec(`neocities upload members.json`, { cwd: "./tmp" }, (err, stdout, stderr) => {
+        exec(`neocities upload members.json`, { cwd: "./tmp" }, async (err, stdout, stderr) => {
             if (err) {
                 console.error(err);
                 interaction.followUp({ content: `An error occurred while uploading the file. Exit code: ${err.code}`, ephemeral: true });
                 return;
             }
+            
+            if (interaction.channel?.isSendable())
+                await interaction.channel.send({ content: "JSON data for safekeeping:", files: [jsonPath] });
 
             unlink(jsonPath);
             interaction.followUp({ content: "Webring membership confirmed" });
