@@ -3,14 +3,7 @@ import { Command } from ".";
 import { unlink, writeFile } from "node:fs/promises";
 import * as config from "../../config.json";
 import { exec } from "node:child_process";
-
-interface Member {
-    discord: string;
-    alias: string;
-    aliasEncoded: string;
-    site: string;
-    addedRingToSite: boolean;
-}
+import { Member, webringJS } from "../data/webringCode";
 
 const command: Command = {
     data: new SlashCommandBuilder()
@@ -53,7 +46,7 @@ const command: Command = {
             const url = new URL(site);
             if (url.protocol !== 'http:' && url.protocol !== 'https:') throw new Error();
         } catch {
-            await interaction.followUp({ content: "The site URL is invalid", ephemeral: true });
+            await interaction.followUp({ content: "The site URL is invalid, make sure it starts with http:// or https://", ephemeral: true });
             return;
         }
 
@@ -140,6 +133,19 @@ add the webring to your site by adding the following HTML to your site:
 </div>
 \`\`\`
 and run \`/confirm\` to fully add your site to the webring` });
+
+            const jsPath = "./tmp/webring.min.js";
+            await writeFile(jsPath, webringJS(data));
+            exec(`neocities upload webring.min.js`, { cwd: "./tmp" }, (err, stdout, stderr) => {
+                if (err) {
+                    console.error(err);
+                    console.error(stderr);
+                    if (interaction.channel?.isSendable())
+                        interaction.channel.send({ content: `An error occurred while uploading the JS file. Exit code: ${err.code}` });
+                    return;
+                }
+                unlink(jsPath);
+            });
         });
     },
 }

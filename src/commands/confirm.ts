@@ -3,14 +3,7 @@ import { Command } from ".";
 import { unlink, writeFile } from "node:fs/promises";
 import * as config from "../../config.json";
 import { exec } from "node:child_process";
-
-interface Member {
-    discord: string;
-    alias: string;
-    aliasEncoded: string;
-    site: string;
-    addedRingToSite: boolean;
-}
+import { Member, webringJS } from "../data/webringCode";
 
 const command: Command = {
     data: new SlashCommandBuilder()
@@ -48,7 +41,7 @@ const command: Command = {
         exec(`neocities upload members.json`, { cwd: "./tmp" }, async (err, stdout, stderr) => {
             if (err) {
                 console.error(err);
-                interaction.followUp({ content: `An error occurred while uploading the file. Exit code: ${err.code}`, ephemeral: true });
+                interaction.followUp({ content: `An error occurred while uploading the JSON file. Exit code: ${err.code}`, ephemeral: true });
                 return;
             }
             
@@ -57,6 +50,19 @@ const command: Command = {
 
             unlink(jsonPath);
             interaction.followUp({ content: "Webring membership confirmed" });
+
+            const jsPath = "./tmp/webring.min.js";
+            await writeFile(jsPath, webringJS(data));
+            exec(`neocities upload webring.min.js`, { cwd: "./tmp" }, (err, stdout, stderr) => {
+                if (err) {
+                    console.error(err);
+                    console.error(stderr);
+                    if (interaction.channel?.isSendable())
+                        interaction.channel.send({ content: `An error occurred while uploading the JS file. Exit code: ${err.code}` });
+                    return;
+                }
+                unlink(jsPath);
+            });
         });
     },
 }
