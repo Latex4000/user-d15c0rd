@@ -1,9 +1,10 @@
-import { ChatInputCommandInteraction, MessageReaction, SlashCommandBuilder, User } from "discord.js";
+import { ActionRowBuilder, ButtonBuilder, ButtonStyle, ChatInputCommandInteraction, MessageComponentInteraction, MessageReaction, SlashCommandBuilder, User } from "discord.js";
 import { Command } from ".";
 import { unlink, writeFile } from "node:fs/promises";
 import * as config from "../../config.json";
 import { exec } from "node:child_process";
 import { Member, webringJS } from "../data/webringCode";
+import { randomUUID } from "node:crypto";
 
 const command: Command = {
     data: new SlashCommandBuilder()
@@ -32,7 +33,7 @@ const command: Command = {
         await interaction.deferReply();
 
         const alias = interaction.options.getString("alias");
-        const site = interaction.options.getString("site");
+        let site = interaction.options.getString("site");
 
         if (alias === null || site === null) {
             await interaction.followUp({ content: "You must provide an alias and a site URL", ephemeral: true });
@@ -44,9 +45,17 @@ const command: Command = {
         // Check if the site URL is valid
         try {
             const url = new URL(site);
-            if (url.protocol !== 'http:' && url.protocol !== 'https:') throw new Error();
+
+            if (url.protocol !== 'http:' && url.protocol !== 'https:') // Checks if URL is HTTP or HTTPS
+                throw new Error;
+            if (!url.hostname.includes(".")) // Checks if URL contains at least one dot
+                throw new Error;
+            if (url.hostname.split(".")[url.hostname.split(".").length - 1].length < 2) // Checks if TLD is at least 2 characters long
+                throw new Error;
+
+            site = url.toString();
         } catch {
-            await interaction.followUp({ content: "The site URL is invalid, make sure it starts with http:// or https://", ephemeral: true });
+            await interaction.followUp({ content: "The site URL is invalid, make sure it starts with http:// or https:// and contains a TLD (e.g. `https://example.com`)", ephemeral: true });
             return;
         }
 
@@ -75,22 +84,52 @@ const command: Command = {
         // Check if user is already in the webring, if so, ask if they want to update their site
         const i = data.findIndex(member => member.discord === interaction.user.id);
         if (i !== -1) {
-            const update = await interaction.followUp({ content: "You are already in the webring. Would you like to update your site?", fetchReply: true });
-            await update.react("✅");
-            await update.react("❌");
+            const ids = {
+                yes: randomUUID(),
+                no: randomUUID(),
+            };
+            const update = await interaction.followUp({
+                content: "You are already in the webring. Would you like to update your site?",
+                components: [
+                    new ActionRowBuilder<ButtonBuilder>()
+                        .addComponents(
+                            new ButtonBuilder()
+                                .setCustomId(ids.yes)
+                                .setLabel("Yes")
+                                .setStyle(ButtonStyle.Success),
+                            new ButtonBuilder()
+                                .setCustomId(ids.no)
+                                .setLabel("No")
+                                .setStyle(ButtonStyle.Danger)),
+                ],
+            });
 
-            const filter = (reaction: MessageReaction, user: User) => user.id === interaction.user.id && ["✅", "❌"].includes(reaction.emoji.name || "");
-            const collected = await update.awaitReactions({ filter, max: 1, time: 60000 });
+            const result = await new Promise<boolean>(resolve => {
+                const filter = (i: MessageComponentInteraction) => i.user.id === interaction.user.id;
+                const confirmationCollector = update.createMessageComponentCollector({ filter, time: 60000 });
+                let timeout = true;
+                confirmationCollector.on("collect", async i => {
+                    timeout = false;
+                    if (i.customId === ids.yes) {
+                        await update.delete();
+                        confirmationCollector.stop();
+                        resolve(true);
+                    } else if (i.customId === ids.no) {
+                        await update.delete();
+                        confirmationCollector.stop();
+                        resolve(false);
+                    }
+                });
+                confirmationCollector.on("end", () => {
+                    if (timeout) {
+                        interaction.followUp({ content: "You took too long to respond", ephemeral: true });
+                        resolve(false);
+                    }
+                });
+            });
 
-            if (collected.size === 0) {
-                await interaction.followUp({ content: "You did not respond in time", ephemeral: true });
+            if (!result)
                 return;
-            }
-
-            if (!collected.first() || collected.first()!.emoji.name === "❌") {
-                await interaction.followUp({ content: "Cancelled", ephemeral: true });
-                return;
-            }
 
             // Update site
             data[i].alias = alias;
