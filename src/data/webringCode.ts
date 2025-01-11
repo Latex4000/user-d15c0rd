@@ -18,5 +18,5 @@ const mainSite: Member = {
 }
 
 export function webringJS (sites: Member[]): string {
-    return `(()=>{let e=${JSON.stringify([mainSite, ...sites])};if(!Array.isArray(e))return;e=e.filter((e=>e.addedRingToSite));const t=e.findIndex((e=>e.aliasEncoded===document.getElementById("latex4000Webring").dataset.alias.toLowerCase()));if(-1===t)return;document.getElementById("latex4000Prev").href=e[(t-1+e.length)%e.length].site;let n=Math.floor(Math.random()*(e.length-1));n>=t&&n++;document.getElementById("latex4000Random").href=e[n].site;document.getElementById("latex4000Next").href=e[(t+1)%e.length].site})();`
+    return `(()=>{let e=${JSON.stringify([mainSite, ...sites])};if(!Array.isArray(e))return;e=e.filter((e=>e.addedRingToSite));const t=e.findIndex((e=>e.aliasEncoded===document.getElementById("${config.collective.name_condensed}Webring").dataset.alias.toLowerCase()));if(-1===t)return;document.getElementById("${config.collective.name_condensed}Prev").href=e[(t-1+e.length)%e.length].site;let n=Math.floor(Math.random()*(e.length-1));n>=t&&n++;document.getElementById("${config.collective.name_condensed}Random").href=e[n].site;document.getElementById("${config.collective.name_condensed}Next").href=e[(t+1)%e.length].site})();`
 }
