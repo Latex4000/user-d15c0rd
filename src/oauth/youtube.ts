@@ -28,7 +28,6 @@ router.get("/", async ({ query }) => {
             return new Response("Failed to write token to file", { status: 500 });
         }
     }
-    // uploadYoutube("Test", "Test", [], "test.mp4");
     return new Response("Successfully authenticated");
 });
 router.all("*", () => new Response("Not found", { status: 404 }));
@@ -80,14 +79,3 @@ export async function uploadYoutube(title: string, description: string, tags: st
     });
     return res.data;
 }
-
-// getYoutubeAccessToken()
-//     .then((url) => {
-//         if (url)
-//             console.log(`Click here to authenticate with youtube: ${url}`);
-//         else
-//             uploadYoutube("Test", "Test", [], "test.mp4")
-//                 .then(console.log)
-//                 .catch(console.error);
-//     })
-//     .catch(console.error);
