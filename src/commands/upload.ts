@@ -1,4 +1,4 @@
-import { ChatInputCommandInteraction, GuildTextBasedChannel, SlashCommandBuilder } from "discord.js";
+import { ChatInputCommandInteraction, SlashCommandBuilder } from "discord.js";
 import { Command } from ".";
 import { unlink, writeFile } from "node:fs/promises";
 import { respond } from "..";
@@ -175,8 +175,9 @@ const command: Command = {
                     unlink(jsonPath);
                 });
             } catch (err) {
-                (interaction.channel as GuildTextBasedChannel | null)?.send(`An error occurred while uploading the file. Exit code: ${err instanceof Error ? err.message : err}`);
                 console.error(err);
+                if (interaction.channel?.isSendable())
+                    await interaction.channel.send(`An error occurred while uploading the file. Exit code: ${err instanceof Error ? err.message : err}`);
             }
         });
     },
