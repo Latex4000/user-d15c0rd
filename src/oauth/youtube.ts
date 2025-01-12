@@ -1,8 +1,7 @@
 import { google } from "googleapis";
-import { IttyRouter } from "itty-router"
-import { createServerAdapter } from '@whatwg-node/server'
+import { IttyRouter } from "itty-router";
+import { createServerAdapter } from '@whatwg-node/server';
 import config from "../../config.json";
-import tokenImport from "../../token.json";
 import { createReadStream } from "node:fs";
 import { createServer } from "node:http";
 import { readFile, writeFile } from "node:fs/promises";
@@ -21,7 +20,7 @@ router.get("/", async ({ query }) => {
     const { tokens } = await auth.getToken(typeof code === "string" ? code : code[0]);
     auth.setCredentials(tokens);
     try {
-        await writeFile("token.json", JSON.stringify(tokens));
+        await writeFile("ytToken.json", JSON.stringify(tokens));
     } catch (err) {
         if (err) {
             console.error(err);
@@ -39,7 +38,7 @@ httpServer.listen(port);
 // The actual functions
 export async function getYoutubeAccessToken() {
     try {
-        const tokenFile = await readFile("token.json", "utf-8");
+        const tokenFile = await readFile("ytToken.json", "utf-8");
         const token = JSON.parse(tokenFile);
         auth.setCredentials(token);
         return;

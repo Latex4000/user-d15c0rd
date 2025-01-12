@@ -3,17 +3,20 @@ import { Command } from ".";
 import { unlink, writeFile } from "node:fs/promises";
 import { respond } from "..";
 import { uploadYoutube } from "../oauth/youtube";
+import { uploadSoundcloud } from "../oauth/soundcloud";
 import { exec } from "node:child_process";
 import { createHash } from "node:crypto";
 
 async function uploadToYoutubeAndSoundcloud (
     interaction: ChatInputCommandInteraction,
+    audioPath: string,
+    imagePath: string,
     videoPath: string,
     title: string,
-    tags: string[],
-    attribution: string
+    tags: string[]
 ) {
-    const ytData = await uploadYoutube(title, `Attribution: ${attribution}\n\nTags: ${tags.length > 0 ? tags.join(", ") : "N/A"}`, tags, videoPath);
+    // Upload to YouTube
+    const ytData = await uploadYoutube(title, `Tags: ${tags.length > 0 ? tags.join(", ") : "N/A"}`, tags, videoPath);
     if (!ytData.status || ytData.status?.uploadStatus !== "uploaded") {
         await respond(interaction, {
             content: `An error occurred while uploading the video\n\`\`\`\n${JSON.stringify(ytData, null, 2)}\n\`\`\``,
@@ -23,13 +26,14 @@ async function uploadToYoutubeAndSoundcloud (
     }
     const youtubeUrl = `https://www.youtube.com/watch?v=${ytData.id}`;
 
-    await respond(interaction, {
-        content: `Successfully uploaded the video to YouTube! ${youtubeUrl}`,
-        ephemeral: true
-    })
-
     // Upload to SoundCloud
-    // const scData = await uploadSoundcloud(title, `Attribution: ${attribution}\n\nTags: ${tags ? tags.join(", ") : "N/A"}`, tags || [], videoPath);
+    const soundcloudUrl = await uploadSoundcloud(title, `Tags: ${tags ? tags.join(", ") : "N/A"}`, tags || [], audioPath, imagePath);
+
+    // Respond to the user
+    await respond(interaction, {
+        content: `Uploaded to YouTube: ${youtubeUrl}\nUploaded to SoundCloud: ${soundcloudUrl}`,
+        ephemeral: true
+    });
 }
 
 const command: Command = {
@@ -60,12 +64,6 @@ const command: Command = {
                 .setDescription("Optional comma-separated tags for the song")
                 .setRequired(false)
         )
-        .addStringOption(option =>
-            option
-                .setName("attribution")
-                .setDescription("Who should the song be attributed to in the description? (Default/Empty: No attribution)")
-                .setRequired(false)
-        )
         .setDMPermission(false),
     run: async (interaction: ChatInputCommandInteraction) => {
         await interaction.deferReply();
@@ -74,7 +72,6 @@ const command: Command = {
         const image = interaction.options.getAttachment("image");
         const title = interaction.options.getString("title");
         const tags = interaction.options.getString("tags")?.split(",").map(tag => tag.trim()) || [];
-        const attribution = interaction.options.getString("attribution") || "";
         
         if (audio === null || image === null || title === null) {
             await respond(interaction, { content: "You must provide both an audio and image file, and a title", ephemeral: true });
@@ -116,7 +113,7 @@ const command: Command = {
 
             // Upload the video to YouTube
             try {
-                await uploadToYoutubeAndSoundcloud(interaction, videoPath, title, tags, attribution);
+                await uploadToYoutubeAndSoundcloud(interaction, audioPath, imagePath, videoPath, title, tags);
             } catch (err) {
                 await respond(interaction, {
                     content: `An error occurred while uploading the video\n\`\`\`\n${err}\n\`\`\``,
