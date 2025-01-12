@@ -1,5 +1,7 @@
 node_modules/
 config.json
 token.json
+ytToken.json
+scToken.json
 .tmp
 build/
