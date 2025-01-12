@@ -1,4 +1,4 @@
-import { ChatInputCommandInteraction, SlashCommandBuilder } from "discord.js";
+import { ChatInputCommandInteraction, GuildTextBasedChannel, SlashCommandBuilder } from "discord.js";
 import { Command } from ".";
 import { unlink, writeFile } from "node:fs/promises";
 import { respond } from "..";
@@ -6,6 +6,7 @@ import { uploadYoutube } from "../oauth/youtube";
 import { uploadSoundcloud } from "../oauth/soundcloud";
 import { exec } from "node:child_process";
 import { createHash } from "node:crypto";
+import * as config from "../../config.json";
 
 async function uploadToYoutubeAndSoundcloud (
     interaction: ChatInputCommandInteraction,
@@ -35,6 +36,11 @@ async function uploadToYoutubeAndSoundcloud (
         content: `Uploaded to YouTube: ${youtubeUrl}\nUploaded to SoundCloud: ${soundcloudUrl}`,
         ephemeral: true
     });
+
+    return {
+        youtubeUrl,
+        soundcloudUrl
+    }
 }
 
 const command: Command = {
@@ -120,8 +126,9 @@ const command: Command = {
             }
 
             // Upload the video to YouTube
+            let urls: { youtubeUrl: string, soundcloudUrl: string } | undefined = undefined;
             try {
-                await uploadToYoutubeAndSoundcloud(interaction, audioPath, imagePath, videoPath, title, description, tags);
+                urls = await uploadToYoutubeAndSoundcloud(interaction, audioPath, imagePath, videoPath, title, description, tags);
             } catch (err) {
                 await respond(interaction, {
                     content: `An error occurred while uploading the video\n\`\`\`\n${err}\n\`\`\``,
@@ -139,6 +146,37 @@ const command: Command = {
                 ]);
             } catch (err) {
                 console.error("Failed to delete temporary files", err);
+            }
+
+            if (!urls)
+                return;
+
+            let data: {
+                title: string;
+                youtubeUrl: string;
+                soundcloudUrl: string;
+            }[] = [];
+            try {
+                data = await fetch(`${config.collective.site_url}/music.json`).then(res => res.json());
+                data = [
+                    { title, ...urls },
+                    ...data
+                ];
+                // Save JSON Date to a file, upload it using Neocities CLI, and then delete the file
+                const jsonPath = "./tmp/music.json";
+                await writeFile(jsonPath, JSON.stringify(data, null, 4));
+                exec(`neocities upload music.json`, { cwd: "./tmp" }, async (err, stdout, stderr) => {
+                    if (err)
+                        throw err;
+                    
+                    if (interaction.channel?.isSendable())
+                        await interaction.channel.send({ content: "JSON data uploaded; for safekeeping:", files: [jsonPath] });
+
+                    unlink(jsonPath);
+                });
+            } catch (err) {
+                (interaction.channel as GuildTextBasedChannel | null)?.send(`An error occurred while uploading the file. Exit code: ${err instanceof Error ? err.message : err}`);
+                console.error(err);
             }
         });
     },
