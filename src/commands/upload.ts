@@ -13,10 +13,11 @@ async function uploadToYoutubeAndSoundcloud (
     imagePath: string,
     videoPath: string,
     title: string,
+    description: string,
     tags: string[]
 ) {
     // Upload to YouTube
-    const ytData = await uploadYoutube(title, `Tags: ${tags.length > 0 ? tags.join(", ") : "N/A"}`, tags, videoPath);
+    const ytData = await uploadYoutube(title, `${description}\n\nTags: ${tags.length > 0 ? tags.join(", ") : "N/A"}`, tags, videoPath);
     if (!ytData.status || ytData.status?.uploadStatus !== "uploaded") {
         await respond(interaction, {
             content: `An error occurred while uploading the video\n\`\`\`\n${JSON.stringify(ytData, null, 2)}\n\`\`\``,
@@ -27,7 +28,7 @@ async function uploadToYoutubeAndSoundcloud (
     const youtubeUrl = `https://www.youtube.com/watch?v=${ytData.id}`;
 
     // Upload to SoundCloud
-    const soundcloudUrl = await uploadSoundcloud(title, `Tags: ${tags ? tags.join(", ") : "N/A"}`, tags || [], audioPath, imagePath);
+    const soundcloudUrl = await uploadSoundcloud(title, `${description}\n\nTags: ${tags ? tags.join(", ") : "N/A"}`, tags || [], audioPath, imagePath);
 
     // Respond to the user
     await respond(interaction, {
@@ -60,6 +61,12 @@ const command: Command = {
         )
         .addStringOption(option =>
             option
+                .setName("description")
+                .setDescription("A description for the song if wanted")
+                .setRequired(false)
+        )
+        .addStringOption(option =>
+            option
                 .setName("tags")
                 .setDescription("Optional comma-separated tags for the song")
                 .setRequired(false)
@@ -71,6 +78,7 @@ const command: Command = {
         const audio = interaction.options.getAttachment("audio");
         const image = interaction.options.getAttachment("image");
         const title = interaction.options.getString("title");
+        const description = interaction.options.getString("description") || "";
         const tags = interaction.options.getString("tags")?.split(",").map(tag => tag.trim()) || [];
         
         if (audio === null || image === null || title === null) {
@@ -113,7 +121,7 @@ const command: Command = {
 
             // Upload the video to YouTube
             try {
-                await uploadToYoutubeAndSoundcloud(interaction, audioPath, imagePath, videoPath, title, tags);
+                await uploadToYoutubeAndSoundcloud(interaction, audioPath, imagePath, videoPath, title, description, tags);
             } catch (err) {
                 await respond(interaction, {
                     content: `An error occurred while uploading the video\n\`\`\`\n${err}\n\`\`\``,
