@@ -67,7 +67,13 @@ discordClient.on("interactionCreate", async (interaction) => {
     }   
 });
 
-export async function respond (interaction: ChatInputCommandInteraction, messageData: { content?: string, files?: AttachmentPayload[] | string[], ephemeral?: boolean }) {
+export async function respond (interaction: ChatInputCommandInteraction, messageData: { content?: string, files?: AttachmentPayload[], ephemeral?: boolean }) {
+    // Send content as file if larger than 2000 characters
+    if (messageData.content && messageData.content.length > 2000) {
+        messageData.files = [...(messageData.files || []), { attachment: Buffer.from(messageData.content), name: "message.txt" }];
+        messageData.content = "Message too long; sending as file";
+    }
+
     if (interaction.replied || interaction.deferred)
         return interaction.editReply(messageData);
     else
