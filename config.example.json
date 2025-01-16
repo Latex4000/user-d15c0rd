@@ -4,6 +4,11 @@
         "name_condensed": "",
         "site_url": ""
     },
+    "scp": {
+        "user": "",
+        "hostname": "",
+        "path": ""
+    },
     "discord": {
         "client_id": "",
         "token": "",

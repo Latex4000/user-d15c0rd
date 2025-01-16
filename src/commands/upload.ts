@@ -162,10 +162,10 @@ const command: Command = {
                     { title, ...urls },
                     ...data
                 ];
-                // Save JSON Date to a file, upload it using Neocities CLI, and then delete the file
+                // Save JSON Date to a file, upload it using scp, and then delete the file
                 const jsonPath = "./tmp/music.json";
                 await writeFile(jsonPath, JSON.stringify(data, null, 4));
-                exec(`neocities upload music.json`, { cwd: "./tmp" }, async (err, stdout, stderr) => {
+                exec(`scp ${jsonPath} ${config.scp.user}@${config.scp.hostname}:${config.scp.path}/music.json`, async (err, stdout, stderr) => {
                     if (err)
                         throw err;
                     

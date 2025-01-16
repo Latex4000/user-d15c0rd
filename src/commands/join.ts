@@ -144,10 +144,10 @@ const command: Command = {
                 addedRingToSite: false
             });
 
-        // Save JSON Date to a file, upload it using Neocities CLI, and then delete the file
+        // Save JSON Date to a file, upload it using scp, and then delete the file
         const jsonPath = "./tmp/members.json";
         await writeFile(jsonPath, JSON.stringify(data, null, 4));
-        exec(`neocities upload members.json`, { cwd: "./tmp" }, async (err, stdout, stderr) => {
+        exec(`scp ${jsonPath} ${config.scp.user}@${config.scp.hostname}:${config.scp.path}/members.json`, async (err, stdout, stderr) => {
             if (err) {
                 console.error(err);
                 interaction.followUp({ content: `An error occurred while uploading the file. Exit code: ${err.code}`, ephemeral: true });
@@ -175,7 +175,7 @@ and run \`/confirm\` to fully add your site to the webring` });
 
             const jsPath = "./tmp/webring.min.js";
             await writeFile(jsPath, webringJS(data));
-            exec(`neocities upload webring.min.js`, { cwd: "./tmp" }, (err, stdout, stderr) => {
+            exec(`scp ${jsPath} ${config.scp.user}@${config.scp.hostname}:${config.scp.path}/webring.min.js`, (err, stdout, stderr) => {
                 if (err) {
                     console.error(err);
                     console.error(stderr);
