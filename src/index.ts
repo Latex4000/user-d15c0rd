@@ -7,6 +7,13 @@ const rest = new REST({ version: "10" }).setToken(config.discord.token);
 (async () => {
     console.log("Started refreshing slash (/) commands.");
 
+    // Delete all commands in development mode
+    if (process.env.NODE_ENV === "development")
+        await rest.put(
+            Routes.applicationCommands(config.discord.client_id),
+            { body: [] }
+        );
+
     await rest.put(
         Routes.applicationCommands(config.discord.client_id),
         { body: commands.map(c => c.data) }
