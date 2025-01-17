@@ -79,3 +79,5 @@ export async function respond (interaction: ChatInputCommandInteraction, message
     else
         return interaction.reply(messageData);
 }
+
+export { discordClient };

@@ -12,7 +12,8 @@
     "discord": {
         "client_id": "",
         "token": "",
-        "owner_id": ""
+        "owner_id": "",
+        "music_feed": ""
     },
     "youtube": {
         "client_id": "",
