@@ -126,7 +126,7 @@ const command: Command = {
         
         // Run ffmpeg to create a video file
         const videoPath = `./tmp/${interaction.user.id}.mp4`;
-        exec(`ffmpeg -loop 1 -i "${imagePath}" -i "${audioPath}" -vf "scale='min(1280, floor(iw/2)*2)':-2,format=yuv420p" -c:v libx264 -preset medium -profile:v main -c:a aac -shortest -movflags +faststart ${videoPath}`, async (err, stdout, stderr) => {
+        exec(`ffmpeg -loop 1 -i "${imagePath}" -i "${audioPath}" -vf "scale='min(1920, floor(iw/2)*2)':-2,format=yuv420p" -c:v libx264 -preset medium -profile:v main -c:a aac -shortest -movflags +faststart ${videoPath}`, async (err, stdout, stderr) => {
             if (err) {
                 await respond(interaction, { 
                     content: `An error occurred while processing the files\n\`\`\`\n${stderr}\n\`\`\``,
