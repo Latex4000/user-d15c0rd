@@ -165,11 +165,12 @@ const command: Command = {
                 title: string;
                 youtubeUrl: string;
                 soundcloudUrl: string;
+                date: string;
             }[] = [];
             try {
                 data = await fetch(`${config.collective.site_url}/music.json`).then(res => res.json());
                 data = [
-                    { title, ...urls },
+                    { title, ...urls, date: new Date().toISOString() },
                     ...data
                 ];
                 // Save JSON Date to a file, upload it using scp, and then delete the file
