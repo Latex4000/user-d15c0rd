@@ -11,7 +11,7 @@ const command: Command = {
         .setDMPermission(false),
     run: async (interaction: ChatInputCommandInteraction) => {
         await interaction.deferReply();
-        const data: Member[] = await fetch(config.collective.site_url + "/members.json")
+        const data: Member[] = await fetch(config.collective.site_url + "/api/members.json")
         .then(res => res.json())
         .catch(e => {
             console.error(e);

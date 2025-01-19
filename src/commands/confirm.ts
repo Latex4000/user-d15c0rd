@@ -14,7 +14,7 @@ const command: Command = {
         // Get JSON Data
         let data: Member[] = [];
         try {
-            data = await fetch(`${config.collective.site_url}/members.json`).then(res => res.json());
+            data = await fetch(`${config.collective.site_url}/api/members.json`).then(res => res.json());
         } catch (e) {
             await interaction.followUp({ content: "An error occurred while fetching the JSON data", ephemeral: true });
             console.error(e);
