@@ -26,7 +26,7 @@ const command: Command = {
 
         const member = data[i];
         const html = htmlGenerator(member.alias);
-        await interaction.followUp({ content: `Here is the HTML for your site:\n\`\`\`\n${html}\n\`\`\`` });
+        await interaction.followUp({ content: `Here is the HTML for your site:\n${html}` });
     },
 }
 
