@@ -1,11 +1,11 @@
-import { ChatInputCommandInteraction, SlashCommandBuilder } from "discord.js";
+import { ActionRowBuilder, ButtonBuilder, ButtonStyle, ChatInputCommandInteraction, MessageComponentInteraction, SlashCommandBuilder } from "discord.js";
 import { Command } from ".";
 import { unlink, writeFile } from "node:fs/promises";
 import { discordClient, respond } from "..";
 import { uploadYoutube } from "../oauth/youtube";
 import { uploadSoundcloud } from "../oauth/soundcloud";
 import { exec } from "node:child_process";
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import * as config from "../../config.json";
 import { fetchHMAC } from "../hmac";
 
@@ -86,6 +86,12 @@ const command: Command = {
     run: async (interaction: ChatInputCommandInteraction) => {
         await interaction.deferReply();
 
+        if (!interaction.channel?.isSendable()) {
+            // WHAT?
+            await respond(interaction, { content: "I cannot send messages in this channel", ephemeral: true });
+            return;
+        }
+
         const audio = interaction.options.getAttachment("audio");
         const image = interaction.options.getAttachment("image");
         const title = interaction.options.getString("title");
@@ -108,6 +114,55 @@ const command: Command = {
             await respond(interaction, { content: "The image file must be a png or jpg file", ephemeral: true });
             return;
         }
+
+        // Confirmation that the person's information is correct, and the image aspect ratio is correct
+        const ids = {
+            yes: randomUUID(),
+            no: randomUUID(),
+        };
+        const update = await interaction.channel.send({
+            content: `Title: ${title}\nDescription: ${description || "N/A"}\nTags: ${tags.length > 0 ? tags.join(", ") : "N/A"}\n\nNote that if your image has a vertical (tall)/square aspect ratio, it may end up being uploaded as a short instead.\nIf you don't want, then ensure your image is wide\n\nIs all of your information correct?`,
+            components: [
+                new ActionRowBuilder<ButtonBuilder>()
+                    .addComponents(
+                        new ButtonBuilder()
+                            .setCustomId(ids.yes)
+                            .setLabel("Yes")
+                            .setStyle(ButtonStyle.Success),
+                        new ButtonBuilder()
+                            .setCustomId(ids.no)
+                            .setLabel("No")
+                            .setStyle(ButtonStyle.Danger)
+                    )
+            ]
+        });
+
+        const result = await new Promise<boolean>(resolve => {
+            const filter = (i: MessageComponentInteraction) => i.user.id === interaction.user.id;
+            const confirmationCollector = update.createMessageComponentCollector({ filter, time: 60000 });
+            let timeout = true;
+            confirmationCollector.on("collect", async i => {
+                timeout = false;
+                if (i.customId === ids.yes) {
+                    await update.delete();
+                    confirmationCollector.stop();
+                    resolve(true);
+                } else if (i.customId === ids.no) {
+                    await update.delete();
+                    confirmationCollector.stop();
+                    resolve(false);
+                }
+            });
+            confirmationCollector.on("end", () => {
+                if (timeout) {
+                    interaction.followUp({ content: "You took too long to respond", ephemeral: true });
+                    resolve(false);
+                }
+            });
+        });
+
+        if (!result)
+            return;
 
         // Download files and save them with a hashed name
         const audioPath = `./tmp/${createHash("sha256").update(audio.url).digest("hex")}${audio.url.endsWith(".mp3") ? ".mp3" : ".wav"}`;
