@@ -61,7 +61,7 @@ const command: Command = {
             site,
             addedRingToSite: false
         })
-        .then(async () => await interaction.followUp({ content: `You have joined the webring\nAdd the webring to your site by adding the following HTML (receivable again via \`/html\`):\n${htmlGenerator(site)}\nand run \`/confirm\` to fully add your site to the webring` }))
+        .then(async () => await interaction.followUp({ content: `You have joined the webring\nAdd the webring to your site by adding the following HTML (receivable again via \`/html\`):\n${htmlGenerator(alias)}\nand run \`/confirm\` to fully add your site to the webring` }))
         .catch(async (err) => await interaction.followUp({ content: "An error occurred while joining the webring\n\`\`\`\n" + err + "\n\`\`\`", ephemeral: true }));
         
     },

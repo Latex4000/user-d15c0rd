@@ -30,7 +30,7 @@ const command: Command = {
             return;
         }
 
-        const html = htmlGenerator(member.site);
+        const html = htmlGenerator(member.alias);
         await interaction.followUp({ content: `Here is the HTML for your site:\n\`\`\`\n${html}\n\`\`\`` });
     },
 }
