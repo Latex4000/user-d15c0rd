@@ -3,6 +3,7 @@ import { Command } from ".";
 import * as config from "../../config.json";
 import { fetchHMAC } from "../hmac";
 import htmlGenerator from "../htmlGenerator";
+import { Member } from "../types/member";
 
 const command: Command = {
     data: new SlashCommandBuilder()
@@ -23,6 +24,24 @@ const command: Command = {
         .setDMPermission(false),
     run: async (interaction: ChatInputCommandInteraction) => {
         await interaction.deferReply();
+
+        let data: Member[] = [];
+        try {
+            data = await fetch(`${config.collective.site_url}/api/members.json`).then(res => res.json());
+        } catch (e) {
+            await interaction.followUp({ content: "An error occurred while fetching the JSON data", ephemeral: true });
+            console.error(e);
+            return;
+        }
+
+        const i = data.findIndex(member => member.discord === interaction.user.id);
+        if (i !== -1) {
+            if (data[i].addedRingToSite)
+                await interaction.followUp({ content: "You have already confirmed your webring membership", ephemeral: true });
+            else
+                await interaction.followUp({ content: "You are already in the webring, run `/confirm` to confirm your webring membership", ephemeral: true });
+            return;
+        }
 
         const alias = interaction.options.getString("alias");
         let site = interaction.options.getString("site");
