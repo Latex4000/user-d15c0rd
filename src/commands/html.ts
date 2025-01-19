@@ -25,11 +25,6 @@ const command: Command = {
         }
 
         const member = data[i];
-        if (member.addedRingToSite) {
-            await interaction.followUp({ content: "You have already added the webring HTML to your site", ephemeral: true });
-            return;
-        }
-
         const html = htmlGenerator(member.alias);
         await interaction.followUp({ content: `Here is the HTML for your site:\n\`\`\`\n${html}\n\`\`\`` });
     },
