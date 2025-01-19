@@ -1,4 +1,4 @@
-import { AttachmentPayload, ChatInputCommandInteraction, SlashCommandBuilder, SlashCommandOptionsOnlyBuilder, SlashCommandSubcommandsOnlyBuilder } from "discord.js";
+import { ChatInputCommandInteraction, SlashCommandBuilder, SlashCommandOptionsOnlyBuilder } from "discord.js";
 import confirm from "./confirm";
 import join from "./join";
 import ping from "./ping";
