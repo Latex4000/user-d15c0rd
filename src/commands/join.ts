@@ -55,7 +55,7 @@ const command: Command = {
             return;
         }
 
-        await fetchHMAC(config.collective.site_url + "/members.json", "POST", {
+        await fetchHMAC(config.collective.site_url + "/api/member", "POST", {
             discord: interaction.user.id,
             alias,
             site,
