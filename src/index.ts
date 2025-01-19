@@ -7,13 +7,6 @@ const rest = new REST({ version: "10" }).setToken(config.discord.token);
 (async () => {
     console.log("Started refreshing slash (/) commands.");
 
-    // Delete all commands in development mode
-    if (process.env.NODE_ENV === "development")
-        await rest.put(
-            Routes.applicationCommands(config.discord.client_id),
-            { body: [] }
-        );
-
     await rest.put(
         Routes.applicationCommands(config.discord.client_id),
         { body: commands.map(c => c.data) }
@@ -86,5 +79,24 @@ export async function respond (interaction: ChatInputCommandInteraction, message
     else
         return interaction.reply(messageData);
 }
+
+let shuttingDown = false;
+process.on("SIGINT", async () => {
+    if (shuttingDown)
+        return;
+
+    shuttingDown = true;
+    console.log("Shutting down...");
+
+    // Delete all commands in development mode
+    if (process.env.NODE_ENV === "development")
+        await rest.put(
+            Routes.applicationCommands(config.discord.client_id),
+            { body: [] }
+        );
+
+    await discordClient.destroy();
+    process.exit(0);
+});
 
 export { discordClient };
