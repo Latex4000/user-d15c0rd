@@ -1,6 +1,7 @@
 import { ChatInputCommandInteraction, SlashCommandBuilder, SlashCommandOptionsOnlyBuilder } from "discord.js";
 import change from "./change";
 import confirm from "./confirm";
+import help from "./help";
 import html from "./html";
 import join from "./join";
 import ping from "./ping";
@@ -15,6 +16,7 @@ const commands: Command[] = [];
 
 commands.push(change);
 commands.push(confirm);
+commands.push(help);
 commands.push(html);
 commands.push(join);
 commands.push(ping);
