@@ -7,6 +7,7 @@ import { uploadSoundcloud } from "../oauth/soundcloud";
 import { exec } from "node:child_process";
 import { createHash } from "node:crypto";
 import * as config from "../../config.json";
+import { fetchHMAC } from "../hmac";
 
 async function uploadToYoutubeAndSoundcloud (
     interaction: ChatInputCommandInteraction,
@@ -30,12 +31,6 @@ async function uploadToYoutubeAndSoundcloud (
 
     // Upload to SoundCloud
     const soundcloudUrl = await uploadSoundcloud(title, `${description}\n\nTags: ${tags ? tags.join(", ") : "N/A"}`, tags || [], audioPath, imagePath);
-
-    // Respond to the user
-    await respond(interaction, {
-        content: `Uploaded to YouTube: ${youtubeUrl}\nUploaded to SoundCloud: ${soundcloudUrl}`,
-        ephemeral: true
-    });
 
     // Send to the config.discord.music_feed channel too
     discordClient.channels.fetch(config.discord.music_feed)
@@ -161,35 +156,14 @@ const command: Command = {
             if (!urls)
                 return;
 
-            let data: {
-                title: string;
-                youtubeUrl: string;
-                soundcloudUrl: string;
-                date: string;
-            }[] = [];
-            try {
-                data = await fetch(`${config.collective.site_url}/music.json`).then(res => res.json());
-                data = [
-                    { title, ...urls, date: new Date().toISOString() },
-                    ...data
-                ];
-                // Save JSON Date to a file, upload it using scp, and then delete the file
-                const jsonPath = "./tmp/music.json";
-                await writeFile(jsonPath, JSON.stringify(data, null, 4));
-                exec(`scp ${jsonPath} ${config.scp.user}@${config.scp.hostname}:${config.scp.path}/music.json`, async (err, stdout, stderr) => {
-                    if (err)
-                        throw err;
-                    
-                    if (interaction.channel?.isSendable())
-                        await interaction.channel.send({ content: "JSON data uploaded; for safekeeping:", files: [jsonPath] });
-
-                    unlink(jsonPath);
-                });
-            } catch (err) {
-                console.error(err);
-                if (interaction.channel?.isSendable())
-                    await interaction.channel.send(`An error occurred while uploading the file. Exit code: ${err instanceof Error ? err.message : err}`);
-            }
+            await fetchHMAC(config.collective.site_url + "/api/sound", "POST", {
+                title,
+                youtubeUrl: urls.youtubeUrl,
+                soundcloudUrl: urls.soundcloudUrl,
+                date: new Date().toISOString(),
+            })
+                .then(async () => await respond(interaction, { content: `Uploaded to YouTube: ${urls.youtubeUrl}\nUploaded to SoundCloud: ${urls.soundcloudUrl}` }))
+                .catch(async (err) => await respond(interaction, { content: `An error occurred while uploading the song\n\`\`\`\n${err}\n\`\`\``, ephemeral: true }));
         });
     },
 }
