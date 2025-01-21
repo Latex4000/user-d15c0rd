@@ -3,6 +3,7 @@ import { Command } from ".";
 import { Member } from "../types/member";
 import * as config from "../../config.json";
 import htmlGenerator from "../htmlGenerator";
+import { fetchHMAC } from "../hmac";
 
 const command: Command = {
     data: new SlashCommandBuilder()
@@ -11,12 +12,15 @@ const command: Command = {
         .setDMPermission(false),
     run: async (interaction: ChatInputCommandInteraction) => {
         await interaction.deferReply();
-        const data: Member[] = await fetch(config.collective.site_url + "/api/members.json")
-        .then(res => res.json())
-        .catch(e => {
+        // Get JSON Data
+        let data: Member[] = [];
+        try {
+            data = await fetchHMAC(`${config.collective.site_url}/api/members.json`, "GET").then(res => res.json());
+        } catch (e) {
+            await interaction.followUp({ content: "An error occurred while fetching the JSON data", ephemeral: true });
             console.error(e);
-            return [];
-        });
+            return;
+        }
 
         const i = data.findIndex(member => member.discord === interaction.user.id);
         if (i === -1) {

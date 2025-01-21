@@ -24,10 +24,10 @@ const command: Command = {
         .setDMPermission(false),
     run: async (interaction: ChatInputCommandInteraction) => {
         await interaction.deferReply();
-
+        // Get JSON Data
         let data: Member[] = [];
         try {
-            data = await fetch(`${config.collective.site_url}/api/members.json`).then(res => res.json());
+            data = await fetchHMAC(`${config.collective.site_url}/api/members.json`, "GET").then(res => res.json());
         } catch (e) {
             await interaction.followUp({ content: "An error occurred while fetching the JSON data", ephemeral: true });
             console.error(e);
