@@ -11,7 +11,9 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
+    "@types/adm-zip": "^0.5.7",
     "@whatwg-node/server": "^0.9.65",
+    "adm-zip": "^0.5.16",
     "discord.js": "^14.17.3",
     "googleapis": "^144.0.0",
     "itty-router": "^5.0.18",
