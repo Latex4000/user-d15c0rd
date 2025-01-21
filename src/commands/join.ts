@@ -21,6 +21,12 @@ const command: Command = {
                 .setDescription("The URL of your site (include https://)")
                 .setRequired(true)
         )
+        .addStringOption(option =>
+            option
+                .setName("color")
+                .setDescription("(hex code) colour used to sign your posts created (write 'none' for random color)")
+                .setRequired(true)
+        )
         .setDMPermission(false),
     run: async (interaction: ChatInputCommandInteraction) => {
         await interaction.deferReply();
@@ -45,9 +51,10 @@ const command: Command = {
 
         const alias = interaction.options.getString("alias");
         let site = interaction.options.getString("site");
+        let color = interaction.options.getString("color");
 
-        if (alias === null || site === null) {
-            await interaction.followUp({ content: "You must provide an alias and a site URL", ephemeral: true });
+        if (alias === null || site === null || color === null) {
+            await interaction.followUp({ content: "You must provide an alias, a site URL, and a hex code color or 'none' for random color", ephemeral: true });
             return;
         }
 
@@ -74,10 +81,17 @@ const command: Command = {
             return;
         }
 
+        // Check if the color is a valid hex code
+        if (color !== "none" && !/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/.test(color)) {
+            await interaction.followUp({ content: "The color must be a valid hex code (e.g. `#FF0000`)", ephemeral: true });
+            return;
+        }
+
         await fetchHMAC(config.collective.site_url + "/api/member", "POST", {
             discord: interaction.user.id,
             alias,
             site,
+            color: color !== "none" ? color : undefined,
             addedRingToSite: false
         })
         .then(async () => await interaction.followUp({ content: `You have joined the webring\nAdd the webring to your site by adding the following HTML (receivable again via \`/html\`):\n${htmlGenerator(alias)}\nand run \`/confirm\` to fully add your site to the webring` }))

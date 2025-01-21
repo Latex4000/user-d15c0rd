@@ -21,6 +21,12 @@ const command: Command = {
                 .setDescription("The URL of your site (include https://)")
                 .setRequired(false)
         )
+        .addStringOption(option =>
+            option
+                .setName("color")
+                .setDescription("Colour used to sign your posts created (hex code)")
+                .setRequired(false)
+        )
         .setDMPermission(false),
     run: async (interaction: ChatInputCommandInteraction) => {
         await interaction.deferReply();
@@ -43,6 +49,7 @@ const command: Command = {
         
         const alias = interaction.options.getString("alias");
         let site = interaction.options.getString("site");
+        const color = interaction.options.getString("color");
 
         // Check if the site URL is valid
         if (site)
@@ -68,8 +75,15 @@ const command: Command = {
             return;
         }
 
+        // Check if the color is a valid hex code
+        if (color && !/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/.test(color)) {
+            await interaction.followUp({ content: "The color must be a valid hex code", ephemeral: true });
+            return;
+        }
+
         if (alias) member.alias = alias;
         if (site) member.site = site;
+        if (color) member.color = color;
         await fetchHMAC(config.collective.site_url + "/api/member", "PUT", member)
             .then(async () => await interaction.followUp({ content: `You have updated your webring membership\n${alias ? `HTML update:\n${htmlGenerator(member.alias)}\n` : ""}\n${!member.addedRingToSite ? "You still need to confirm your webring membership by adding the HTML to your site and running \`/confirm\`" : ""}` }))
             .catch(async (err) => await interaction.followUp({ content: "An error occurred while updating your webring membership\n\`\`\`\n" + err + "\n\`\`\`", ephemeral: true }));

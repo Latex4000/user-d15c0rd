@@ -3,4 +3,5 @@ export interface Member {
     alias: string;
     site: string;
     addedRingToSite: boolean;
+    color: string;
 }
