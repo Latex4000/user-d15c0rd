@@ -7,7 +7,7 @@ import { uploadSoundcloud } from "../oauth/soundcloud";
 import { exec } from "node:child_process";
 import { createHash, randomUUID } from "node:crypto";
 import * as config from "../../config.json";
-import { fetchHMAC } from "../hmac";
+import { fetchHMAC } from "../fetch";
 
 async function uploadToYoutubeAndSoundcloud (
     interaction: ChatInputCommandInteraction,

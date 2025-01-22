@@ -4,7 +4,7 @@ import crypto from "crypto";
 export function fetchHMAC (url: string | URL | globalThis.Request, method: string = "POST", data?: any) {
     const body: string | undefined = data ? JSON.stringify(data) : undefined;
     const timestamp = Date.now().toString();
-    const hmac = crypto.createHmac("sha256", config.secret_hmac).update(body ? `${timestamp}.${body}` : timestamp).digest("hex");
+    const hmac = crypto.createHmac("sha256", config.secret_hmac).update(`${timestamp}.${body ?? ""}`).digest("hex");
     return fetch(url, {
         method,
         headers: {
@@ -13,5 +13,10 @@ export function fetchHMAC (url: string | URL | globalThis.Request, method: strin
             "X-Timestamp": timestamp
         },
         body
-    });
+    })
+        .then(async res => {
+            if (res.ok)
+                return res.json();
+            throw new Error(`HTTP Error: ${res.status} ${res.statusText}\n${await res.json().then(data => data.error).catch(() => "")}`);
+        });
 }

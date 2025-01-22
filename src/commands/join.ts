@@ -1,7 +1,7 @@
 import { ChatInputCommandInteraction, SlashCommandBuilder } from "discord.js";
 import { Command } from ".";
 import * as config from "../../config.json";
-import { fetchHMAC } from "../hmac";
+import { fetchHMAC } from "../fetch";
 import htmlGenerator from "../htmlGenerator";
 import { Member } from "../types/member";
 
@@ -33,9 +33,9 @@ const command: Command = {
         // Get JSON Data
         let data: Member[] = [];
         try {
-            data = await fetchHMAC(`${config.collective.site_url}/api/members.json`, "GET").then(res => res.json());
+            data = await fetchHMAC(`${config.collective.site_url}/api/members.json`, "GET");
         } catch (e) {
-            await interaction.followUp({ content: "An error occurred while fetching the JSON data", ephemeral: true });
+            await interaction.followUp({ content: `An error occurred while fetching the JSON data\n\`\`\`\n${e}\n\`\`\``, ephemeral: true });
             console.error(e);
             return;
         }

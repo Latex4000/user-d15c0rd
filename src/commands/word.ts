@@ -1,7 +1,7 @@
 import { ChatInputCommandInteraction, SlashCommandBuilder } from "discord.js";
 import { Command } from ".";
 import AdmZip from "adm-zip";
-import { fetchHMAC } from "../hmac";
+import { fetchHMAC } from "../fetch";
 import * as config from "../../config.json";
 
 const fileSizeLimit = 2 ** 20; // 1 MB
