@@ -2,13 +2,13 @@ import * as config from "../config.json";
 import crypto from "crypto";
 
 export function fetchHMAC (url: string | URL | globalThis.Request, method: string = "POST", data?: any) {
-    const body: string | undefined = data ? JSON.stringify(data) : undefined;
+    const body: string | FormData | undefined = data ? data instanceof FormData ? data : JSON.stringify(data) : undefined;
     const timestamp = Date.now().toString();
-    const hmac = crypto.createHmac("sha256", config.secret_hmac).update(`${timestamp}.${body ?? ""}`).digest("hex");
+    const hmac = crypto.createHmac("sha256", config.secret_hmac).update(`${timestamp}.${body ? body instanceof FormData ? body.get("title") : body : ""}`).digest("hex");
     return fetch(url, {
         method,
         headers: {
-            "Content-Type": "application/json",
+            "Content-Type": body instanceof FormData ? "multipart/form-data" : "application/json",
             "X-Signature": hmac,
             "X-Timestamp": timestamp
         },
