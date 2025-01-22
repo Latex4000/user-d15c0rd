@@ -7,8 +7,8 @@ import { fetchHMAC } from "../fetch";
 
 const command: Command = {
     data: new SlashCommandBuilder()
-        .setName("html")
-        .setDescription("Get your premade HTML for the webring")
+        .setName("info")
+        .setDescription("Get your information from the webring")
         .setDMPermission(false),
     run: async (interaction: ChatInputCommandInteraction) => {
         await interaction.deferReply();
@@ -30,7 +30,7 @@ const command: Command = {
 
         const member = data[i];
         const html = htmlGenerator(member.alias);
-        await interaction.followUp({ content: `Here is the HTML for your site:\n${html}` });
+        await interaction.followUp({ content: `**Alias:** ${member.alias}\n**Site:** <${member.site}>\n**Color for [Words](${config.collective.site_url}/words):** ${member.color}\n\n**HTML for Site:** ${html}` });
     },
 }
 
