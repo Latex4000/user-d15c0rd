@@ -2,7 +2,7 @@ import { ChatInputCommandInteraction, SlashCommandBuilder } from "discord.js";
 import { Command } from ".";
 import * as config from "../../config.json";
 import { fetchHMAC } from "../fetch";
-import { Member } from "../types/member";
+import { Member, memberInfo } from "../types/member";
 
 const command: Command = {
     data: new SlashCommandBuilder()
@@ -27,6 +27,11 @@ const command: Command = {
             return;
         }
 
+        if (!data[i].site) {
+            await interaction.followUp({ content: "You have not added your site URL. Run `/change` to add your site URL", ephemeral: true });
+            return;
+        }
+
         if (data[i].addedRingToSite) {
             await interaction.followUp({ content: "You have already confirmed your webring membership", ephemeral: true });
             return;
@@ -35,7 +40,12 @@ const command: Command = {
         data[i].addedRingToSite = true;
 
         await fetchHMAC(config.collective.site_url + "/api/member", "PUT", data[i])
-            .then(async () => await interaction.followUp({ content: "You have confirmed your webring membership" }))
+            .then(async (members: Member[]) => {
+                const member = members[0];
+                if (!member)
+                    throw new Error("Member not found in response");
+                await interaction.followUp({ content: `You have confirmed your webring membership`, embeds: [memberInfo(member)], ephemeral: true });
+            })
             .catch(async (err) => await interaction.followUp({ content: "An error occurred while confirming your webring membership\n\`\`\`\n" + err + "\n\`\`\`", ephemeral: true }));
     },
 }

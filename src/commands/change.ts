@@ -1,8 +1,7 @@
 import { ChatInputCommandInteraction, SlashCommandBuilder } from "discord.js";
 import { Command } from ".";
-import { Member } from "../types/member";
+import { Member, memberInfo } from "../types/member";
 import * as config from "../../config.json";
-import htmlGenerator from "../htmlGenerator";
 import { fetchHMAC } from "../fetch";
 
 const command: Command = {
@@ -49,7 +48,7 @@ const command: Command = {
         
         const alias = interaction.options.getString("alias");
         let site = interaction.options.getString("site");
-        const color = interaction.options.getString("color");
+        let color = interaction.options.getString("color");
 
         // Check if the site URL is valid
         if (site)
@@ -77,15 +76,24 @@ const command: Command = {
 
         // Check if the color is a valid hex code
         if (color && !/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/.test(color)) {
-            await interaction.followUp({ content: "The color must be a valid hex code", ephemeral: true });
-            return;
+            // Check if valid without #
+            if (!/^([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/.test(color)) {
+                await interaction.followUp({ content: "The color must be a valid hex code (e.g. `#FF0000`)", ephemeral: true });
+                return;
+            }
+            color = "#" + color;
         }
 
         if (alias) member.alias = alias;
         if (site) member.site = site;
         if (color) member.color = color;
         await fetchHMAC(config.collective.site_url + "/api/member", "PUT", member)
-            .then(async () => await interaction.followUp({ content: `You have updated your webring membership\n${alias ? `HTML update:\n${htmlGenerator(member.alias)}\n` : ""}\n${!member.addedRingToSite ? "You still need to confirm your webring membership by adding the HTML to your site and running \`/confirm\`" : ""}` }))
+            .then(async (members: Member[]) => {
+                const member = members[0];
+                if (!member)
+                    throw new Error("Member not found in response");
+                await interaction.followUp({ content: `You have updated your webring membership`, embeds: [memberInfo(member)], ephemeral: true })
+            })
             .catch(async (err) => await interaction.followUp({ content: "An error occurred while updating your webring membership\n\`\`\`\n" + err + "\n\`\`\`", ephemeral: true }));
     },
 }

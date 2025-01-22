@@ -1,8 +1,7 @@
 import { ChatInputCommandInteraction, SlashCommandBuilder } from "discord.js";
 import { Command } from ".";
-import { Member } from "../types/member";
+import { Member, memberInfo } from "../types/member";
 import * as config from "../../config.json";
-import htmlGenerator from "../htmlGenerator";
 import { fetchHMAC } from "../fetch";
 
 const command: Command = {
@@ -29,8 +28,7 @@ const command: Command = {
         }
 
         const member = data[i];
-        const html = htmlGenerator(member.alias);
-        await interaction.followUp({ content: `**Alias:** ${member.alias}\n**Site:** <${member.site}>\n**Color for [Words](${config.collective.site_url}/words):** ${member.color}\n\n**HTML for Site:** ${html}` });
+        await interaction.followUp({ embeds: [memberInfo(member)], ephemeral: true });
     },
 }
 
