@@ -70,7 +70,14 @@ const command: Command = {
             return;
         }
 
+        // If attachment is a txt file, do not allow assets
+        if (attachment.name.endsWith(".txt") && assets) {
+            await interaction.followUp({ content: "You cannot include assets with a `.txt` file.\nAssets are primarily only for markdown files for if you need to attach images to them.\nPlease remove the assets file and try again.", ephemeral: true });
+            return;
+        }
+
         const formData = new FormData();
+        formData.append("discord", interaction.user.id);
         formData.append("title", title);
         formData.append("tags", tags || "");
         formData.append("md", content);
@@ -85,7 +92,7 @@ const command: Command = {
 
                     for (const entry of entries) {
                         if (entry.isDirectory)
-                            continue;
+                            throw new Error(`Zip file cannot contain directories. Please only include files, and reference them in the markdown file`);
 
                         const file = entry.getData();
                         if (file.length > fileSizeLimit)
@@ -102,11 +109,8 @@ const command: Command = {
 
         // Send form data to the server
         await fetchHMAC(`${config.collective.site_url}/api/words`, "POST", formData)
-            .then(async res => {
-                if (res.status === 200)
-                    await interaction.followUp({ content: "Post uploaded successfully" });
-                else
-                    await interaction.followUp({ content: `An error occurred while uploading the post\n\`\`\`\n${await res.text()}\n\`\`\``, ephemeral: true });
+            .then(async word => {
+                await interaction.followUp({ content: `Post uploaded successfully\n**Link:** ${config.collective.site_url}/words/${Math.floor(new Date(word.date).getTime() / 1000).toString(10)}` });
             })
             .catch(async e => {
                 await interaction.followUp({ content: `An error occurred while uploading the post\n\`\`\`\n${e}\n\`\`\``, ephemeral: true });
