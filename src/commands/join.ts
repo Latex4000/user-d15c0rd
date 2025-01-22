@@ -62,7 +62,7 @@ const command: Command = {
         try {
             const url = new URL(site);
 
-            if (url.protocol !== 'http:' && url.protocol !== 'https:') // Checks if URL is HTTP or HTTPS
+            if (url.protocol !== 'https:') // Checks if URL is HTTPS
                 throw new Error;
             if (!url.hostname.includes(".")) // Checks if URL contains at least one dot
                 throw new Error;
@@ -71,7 +71,7 @@ const command: Command = {
 
             site = url.toString();
         } catch {
-            await interaction.followUp({ content: "The site URL is invalid, make sure it starts with http:// or https:// and contains a TLD (e.g. `https://example.com`)", ephemeral: true });
+            await interaction.followUp({ content: "The site URL is invalid, make sure it starts with https:// (http:// will not be accepted) and contains a TLD (e.g. `https://example.com`)", ephemeral: true });
             return;
         }
 
