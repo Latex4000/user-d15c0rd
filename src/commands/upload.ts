@@ -1,13 +1,13 @@
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle, ChatInputCommandInteraction, MessageComponentInteraction, SlashCommandBuilder } from "discord.js";
-import { Command } from ".";
+import { Command } from "./index.js";
 import { unlink, writeFile } from "node:fs/promises";
-import { discordClient, respond } from "..";
-import { uploadYoutube } from "../oauth/youtube";
-import { uploadSoundcloud } from "../oauth/soundcloud";
+import { discordClient, respond } from "../index.js";
+import { uploadYoutube } from "../oauth/youtube.js";
+import { uploadSoundcloud } from "../oauth/soundcloud.js";
 import { exec } from "node:child_process";
 import { createHash, randomUUID } from "node:crypto";
-import * as config from "../../config.json";
-import { fetchHMAC } from "../fetch";
+import config from "../../config.json" with { type: "json" };
+import { fetchHMAC } from "../fetch.js";
 
 async function uploadToYoutubeAndSoundcloud (
     interaction: ChatInputCommandInteraction,

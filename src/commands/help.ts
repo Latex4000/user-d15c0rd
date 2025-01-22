@@ -1,6 +1,6 @@
 import { ChatInputCommandInteraction, SlashCommandBuilder, ApplicationCommandOptionType, ActionRowBuilder, StringSelectMenuBuilder, ComponentType, Message, RepliableInteraction, ButtonBuilder, ButtonStyle } from "discord.js";
-import { Command, commands } from ".";
-import { levenshteinDistance } from "../levenshtein";
+import { Command, commands } from "./index.js";
+import { levenshteinDistance } from "../levenshtein.js";
 
 async function sendCommandText (interaction: RepliableInteraction, command: Command, message?: Message) {
     const options = [...command.data.options];

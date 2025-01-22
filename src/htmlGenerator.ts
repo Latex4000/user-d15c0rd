@@ -1,4 +1,4 @@
-import * as config from "../config.json";
+import config from "../config.json" with { type: "json" };
 
 export default function htmlGenerator(alias: string) {
     return `\`\`\`html

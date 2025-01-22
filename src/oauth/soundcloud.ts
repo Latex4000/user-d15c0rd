@@ -1,5 +1,5 @@
 import { readFile, writeFile } from "node:fs/promises";
-import config from "../../config.json";
+import config from "../../config.json" with { type: "json" };
 import { createReadStream } from "node:fs";
 
 interface SoundcloudToken {

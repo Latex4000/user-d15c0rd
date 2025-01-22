@@ -1,7 +1,7 @@
 import { AttachmentPayload, ChatInputCommandInteraction, Client, DiscordAPIError, GatewayIntentBits, Message, REST, Routes } from "discord.js";
-import * as config from "../config.json";
-import { commands } from "./commands";
-import { getYoutubeAccessToken } from "./oauth/youtube";
+import config from "../config.json" with { type: "json" };
+import { commands } from "./commands/index.js";
+import { getYoutubeAccessToken } from "./oauth/youtube.js";
 
 const rest = new REST({ version: "10" }).setToken(config.discord.token);
 (async () => {

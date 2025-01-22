@@ -1,12 +1,12 @@
 import { ChatInputCommandInteraction, SlashCommandBuilder, SlashCommandOptionsOnlyBuilder } from "discord.js";
-import change from "./change";
-import confirm from "./confirm";
-import help from "./help";
-import info from "./info";
-import join from "./join";
-import ping from "./ping";
-import upload from "./upload";
-import word from "./word";
+import change from "./change.js";
+import confirm from "./confirm.js";
+import help from "./help.js";
+import info from "./info.js";
+import join from "./join.js";
+import ping from "./ping.js";
+import upload from "./upload.js";
+import word from "./word.js";
 export interface Command {
     data: SlashCommandBuilder | SlashCommandOptionsOnlyBuilder;
     run: (interaction: ChatInputCommandInteraction) => Promise<void>;

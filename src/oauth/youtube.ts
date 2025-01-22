@@ -1,7 +1,7 @@
 import { google } from "googleapis";
 import { IttyRouter } from "itty-router";
 import { createServerAdapter } from '@whatwg-node/server';
-import config from "../../config.json";
+import config from "../../config.json" with { type: "json" };
 import { createReadStream } from "node:fs";
 import { createServer } from "node:http";
 import { readFile, writeFile } from "node:fs/promises";

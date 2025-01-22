@@ -4,12 +4,13 @@
   "description": "A discord bot that allows you to upload an image with audio and a title to Youtube and Soundcloud",
   "main": "index.js",
   "scripts": {
-    "build": "tsc --resolveJsonModule --outDir ./build",
+    "build": "rm -rf build && tsc --outDir build",
     "start": "node build/src/index.js",
     "dev": "NODE_ENV=development ts-node src/index.ts"
   },
   "author": "",
   "license": "MIT",
+  "type": "module",
   "dependencies": {
     "@latex4000/fetch-hmac": "^0.1.1",
     "@types/adm-zip": "^0.5.7",

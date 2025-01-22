@@ -1,6 +1,6 @@
 import { ColorResolvable, EmbedBuilder } from "discord.js";
-import * as config from "../../config.json";
-import htmlGenerator from "../htmlGenerator";
+import config from "../../config.json" with { type: "json" };
+import htmlGenerator from "../htmlGenerator.js";
 
 export interface Member {
     discord: string;
