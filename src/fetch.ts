@@ -1,17 +1,12 @@
+import { fetchWithHmac } from "@latex4000/fetch-hmac";
 import * as config from "../config.json";
-import crypto from "crypto";
 
 export function fetchHMAC (url: string | URL | globalThis.Request, method: string = "POST", data?: any) {
     const body: string | FormData | undefined = data ? data instanceof FormData ? data : JSON.stringify(data) : undefined;
-    const timestamp = Date.now().toString();
-    const hmac = crypto.createHmac("sha256", config.secret_hmac).update(`${timestamp}.${body ? body instanceof FormData ? body.get("title") : body : ""}`).digest("hex");
-    const headers: Record<string, string> = {
-        "X-Signature": hmac,
-        "X-Timestamp": timestamp
-    };
+    const headers: Record<string, string> = {};
     if (!(body instanceof FormData))
         headers["Content-Type"] = "application/json";
-    return fetch(url, {
+    return fetchWithHmac(config.secret_hmac, url, {
         method,
         headers,
         body

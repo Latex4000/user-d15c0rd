@@ -11,6 +11,7 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
+    "@latex4000/fetch-hmac": "^0.1.0",
     "@types/adm-zip": "^0.5.7",
     "@whatwg-node/server": "^0.9.65",
     "adm-zip": "^0.5.16",
