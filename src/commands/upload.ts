@@ -8,6 +8,7 @@ import { createHash, randomUUID } from "node:crypto";
 import config from "../../config.json" with { type: "json" };
 import { fetchHMAC } from "../fetch.js";
 import youtubeClient from "../oauth/youtube.js";
+import { openAsBlob } from "node:fs";
 
 async function uploadToYoutubeAndSoundcloud(
     interaction: ChatInputCommandInteraction,
@@ -59,7 +60,7 @@ const command: Command = {
     data: new SlashCommandBuilder()
         .setName("upload")
         .setDescription("Upload a song to the funny collective channel")
-        .addAttachmentOption(option => 
+        .addAttachmentOption(option =>
             option
                 .setName("audio")
                 .setDescription("The audio file to upload")
@@ -104,7 +105,7 @@ const command: Command = {
         const title = interaction.options.getString("title");
         const description = interaction.options.getString("description") || "";
         const tags = interaction.options.getString("tags")?.split(",").map(tag => tag.trim()) || [];
-        
+
         if (audio === null || image === null || title === null) {
             await respond(interaction, { content: "You must provide both an audio and image file, and a title", ephemeral: true });
             return;
@@ -180,12 +181,12 @@ const command: Command = {
         await fetch(image.url).then(res => res.blob()).then(async blob => {
             await writeFile(imagePath, Buffer.from(await blob.arrayBuffer()));
         });
-        
+
         // Run ffmpeg to create a video file
         const videoPath = `./tmp/${interaction.user.id}.mp4`;
         exec(`ffmpeg -loop 1 -i "${imagePath}" -i "${audioPath}" -vf "scale='min(1920, floor(iw/2)*2)':-2,format=yuv420p" -c:v libx264 -preset medium -profile:v main -c:a aac -shortest -movflags +faststart ${videoPath}`, async (err, stdout, stderr) => {
             if (err) {
-                await respond(interaction, { 
+                await respond(interaction, {
                     content: `An error occurred while processing the files\n\`\`\`\n${stderr}\n\`\`\``,
                     ephemeral: true,
                 });
@@ -203,29 +204,31 @@ const command: Command = {
                 });
                 return;
             }
-            
+
             // Delete the temporary video file and the downloaded files
-            try {
-                await Promise.all([
-                    unlink(videoPath),
-                    unlink(audioPath),
-                    unlink(imagePath),
-                ]);
-            } catch (err) {
-                console.error("Failed to delete temporary files", err);
+            const deleteTemporaryFiles = () => Promise.allSettled([
+                unlink(videoPath),
+                unlink(audioPath),
+                unlink(imagePath),
+            ]).catch((error) => console.error("Failed to delete temporary files", error));
+
+            if (!urls) {
+                await deleteTemporaryFiles();
+                return;
             }
 
-            if (!urls)
-                return;
+            const formData = new FormData();
+            formData.append("title", title);
+            formData.append("soundcloudUrl", urls.soundcloudUrl);
+            formData.append("youtubeUrl", urls.youtubeUrl);
+            formData.append("track", await openAsBlob(audioPath));
+            formData.append("cover", await openAsBlob(imagePath));
 
-            await fetchHMAC(config.collective.site_url + "/api/sound", "POST", {
-                title,
-                youtubeUrl: urls.youtubeUrl,
-                soundcloudUrl: urls.soundcloudUrl,
-                date: new Date().toISOString(),
-            })
+            await fetchHMAC(config.collective.site_url + "/api/sound", "POST", formData)
                 .then(async () => await respond(interaction, { content: `Uploaded to YouTube: ${urls.youtubeUrl}\nUploaded to SoundCloud: ${urls.soundcloudUrl}` }))
                 .catch(async (err) => await respond(interaction, { content: `An error occurred while uploading the song\n\`\`\`\n${err}\n\`\`\``, ephemeral: true }));
+
+            await deleteTemporaryFiles();
         });
     },
 }
