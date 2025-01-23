@@ -94,14 +94,14 @@ const command: Command = {
             color = "#" + color;
         }
 
-        await fetchHMAC(config.collective.site_url + "/api/member", "POST", {
+        await fetchHMAC<Member[]>(config.collective.site_url + "/api/member", "POST", {
             discord: interaction.user.id,
             alias,
             site: site || undefined,
             color: color || undefined,
             addedRingToSite: false
         })
-        .then(async (members: Member[]) => {
+        .then(async members => {
             const member = members[0];
             if (!member)
                 throw new Error("Member not found in response");

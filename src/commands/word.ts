@@ -3,6 +3,7 @@ import { Command } from "./index.js";
 import AdmZip from "adm-zip";
 import { fetchHMAC } from "../fetch.js";
 import config from "../../config.json" with { type: "json" };
+import { Word } from "../types/word.js";
 
 const fileSizeLimit = 2 ** 20; // 1 MB
 
@@ -108,7 +109,7 @@ const command: Command = {
         }
 
         // Send form data to the server
-        await fetchHMAC(`${config.collective.site_url}/api/words`, "POST", formData)
+        await fetchHMAC<Word>(`${config.collective.site_url}/api/words`, "POST", formData)
             .then(async word => {
                 await interaction.followUp({ content: `Post uploaded successfully\n**Link:** ${config.collective.site_url}/words/${Math.floor(new Date(word.date).getTime() / 1000).toString(10)}` });
             })

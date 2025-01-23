@@ -13,7 +13,7 @@ export function fetchHMAC<T> (url: string | URL | globalThis.Request, method: st
     })
         .then(async res => {
             if (res.ok)
-                return res.json() as T;
+                return res.json() as Promise<T>;
             throw new Error(`HTTP Error: ${res.status} ${res.statusText}\n${(await res.json() as Promise<{ error: string }>).then(data => data.error).catch(() => "")}`);
         });
 }

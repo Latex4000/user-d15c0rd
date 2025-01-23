@@ -40,8 +40,8 @@ const command: Command = {
 
         member.addedRingToSite = true;
 
-        await fetchHMAC(config.collective.site_url + "/api/member", "PUT", member)
-            .then(async (members: Member[]) => {
+        await fetchHMAC<Member[]>(config.collective.site_url + "/api/member", "PUT", member)
+            .then(async members => {
                 const member = members[0];
                 if (!member)
                     throw new Error("Member not found in response");
