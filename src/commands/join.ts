@@ -2,7 +2,6 @@ import { ChatInputCommandInteraction, SlashCommandBuilder } from "discord.js";
 import { Command } from "./index.js";
 import config from "../../config.json" with { type: "json" };
 import { fetchHMAC } from "../fetch.js";
-import htmlGenerator from "../htmlGenerator.js";
 import { Member, memberInfo } from "../types/member.js";
 
 const command: Command = {
@@ -31,20 +30,21 @@ const command: Command = {
     run: async (interaction: ChatInputCommandInteraction) => {
         await interaction.deferReply();
         // Get JSON Data
-        let data: Member[] = [];
+        let member: Member | undefined = undefined;
         try {
-            data = await fetchHMAC(`${config.collective.site_url}/api/members.json`, "GET");
+            const data: Member[] = await fetchHMAC(`${config.collective.site_url}/api/member?id=${interaction.user.id}`, "GET");
+            if (data.length)
+                member = data[0];
         } catch (e) {
             await interaction.followUp({ content: `An error occurred while fetching the JSON data\n\`\`\`\n${e}\n\`\`\``, ephemeral: true });
             console.error(e);
             return;
         }
 
-        const i = data.findIndex(member => member.discord === interaction.user.id);
-        if (i !== -1) {
-            if (data[i].addedRingToSite)
+        if (member) {
+            if (member.addedRingToSite)
                 await interaction.followUp({ content: "You have already confirmed your webring membership", ephemeral: true });
-            else if (!data[i].site)
+            else if (!member.site)
                 await interaction.followUp({ content: "You have not added your site URL. Run `/change` to add your site URL", ephemeral: true });
             else
                 await interaction.followUp({ content: "You are already in the webring, run `/confirm` to confirm your webring membership", ephemeral: true });

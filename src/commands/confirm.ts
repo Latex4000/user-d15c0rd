@@ -12,34 +12,35 @@ const command: Command = {
     run: async (interaction: ChatInputCommandInteraction) => {
         await interaction.deferReply();
         // Get JSON Data
-        let data: Member[] = [];
+        let member: Member | undefined = undefined;
         try {
-            data = await fetchHMAC(`${config.collective.site_url}/api/members.json`, "GET");
+            const data: Member[] = await fetchHMAC(`${config.collective.site_url}/api/member?id=${interaction.user.id}`, "GET");
+            if (data.length)
+                member = data[0];
         } catch (e) {
             await interaction.followUp({ content: `An error occurred while fetching the JSON data\n\`\`\`\n${e}\n\`\`\``, ephemeral: true });
             console.error(e);
             return;
         }
 
-        const i = data.findIndex(member => member.discord === interaction.user.id);
-        if (i === -1) {
+        if (!member) {
             await interaction.followUp({ content: "You are not in the webring. Run `/join` to join the webring", ephemeral: true });
             return;
         }
 
-        if (!data[i].site) {
+        if (!member.site) {
             await interaction.followUp({ content: "You have not added your site URL. Run `/change` to add your site URL", ephemeral: true });
             return;
         }
 
-        if (data[i].addedRingToSite) {
+        if (member.addedRingToSite) {
             await interaction.followUp({ content: "You have already confirmed your webring membership", ephemeral: true });
             return;
         }
 
-        data[i].addedRingToSite = true;
+        member.addedRingToSite = true;
 
-        await fetchHMAC(config.collective.site_url + "/api/member", "PUT", data[i])
+        await fetchHMAC(config.collective.site_url + "/api/member", "PUT", member)
             .then(async (members: Member[]) => {
                 const member = members[0];
                 if (!member)

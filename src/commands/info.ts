@@ -12,22 +12,22 @@ const command: Command = {
     run: async (interaction: ChatInputCommandInteraction) => {
         await interaction.deferReply();
         // Get JSON Data
-        let data: Member[] = [];
+        let member: Member | undefined = undefined;
         try {
-            data = await fetchHMAC(`${config.collective.site_url}/api/members.json`, "GET");
+            const data: Member[] = await fetchHMAC(`${config.collective.site_url}/api/member?id=${interaction.user.id}`, "GET");
+            if (data.length)
+                member = data[0];
         } catch (e) {
             await interaction.followUp({ content: `An error occurred while fetching the JSON data\n\`\`\`\n${e}\n\`\`\``, ephemeral: true });
             console.error(e);
             return;
         }
 
-        const i = data.findIndex(member => member.discord === interaction.user.id);
-        if (i === -1) {
+        if (!member) {
             await interaction.followUp({ content: "You are not in the webring. Run `/join` to join the webring", ephemeral: true });
             return;
         }
 
-        const member = data[i];
         await interaction.followUp({ embeds: [memberInfo(member)], ephemeral: true });
     },
 }
