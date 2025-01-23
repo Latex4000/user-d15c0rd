@@ -80,8 +80,10 @@ const command: Command = {
         const formData = new FormData();
         formData.append("discord", interaction.user.id);
         formData.append("title", title);
-        formData.append("tags", tags || "");
         formData.append("md", content);
+        if (tags) {
+            formData.append("tags", tags);
+        }
 
         // Extract zip and append every single file data into "assets" form data key
         if (assets) {
