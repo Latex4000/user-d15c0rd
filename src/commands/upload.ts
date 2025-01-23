@@ -2,12 +2,12 @@ import { ActionRowBuilder, ButtonBuilder, ButtonStyle, ChatInputCommandInteracti
 import { Command } from "./index.js";
 import { unlink, writeFile } from "node:fs/promises";
 import { discordClient, respond } from "../index.js";
-import { uploadYoutube } from "../oauth/youtube.js";
 import { uploadSoundcloud } from "../oauth/soundcloud.js";
 import { exec } from "node:child_process";
 import { createHash, randomUUID } from "node:crypto";
 import config from "../../config.json" with { type: "json" };
 import { fetchHMAC } from "../fetch.js";
+import youtubeClient from "../oauth/youtube.js";
 
 async function uploadToYoutubeAndSoundcloud (
     interaction: ChatInputCommandInteraction,
@@ -18,16 +18,20 @@ async function uploadToYoutubeAndSoundcloud (
     description: string,
     tags: string[]
 ) {
+    let youtubeUrl = '';
+
     // Upload to YouTube
-    const ytData = await uploadYoutube(title, `${description}\n\nTags: ${tags.length > 0 ? tags.join(", ") : "N/A"}`, tags, videoPath);
-    if (!ytData.status || ytData.status?.uploadStatus !== "uploaded") {
-        await respond(interaction, {
-            content: `An error occurred while uploading the video\n\`\`\`\n${JSON.stringify(ytData, null, 2)}\n\`\`\``,
-            ephemeral: true
-        });
-        return;
+    if (youtubeClient.hasAccessToken) {
+        const ytData = await youtubeClient.upload(title, `${description}\n\nTags: ${tags.length > 0 ? tags.join(", ") : "N/A"}`, tags, videoPath);
+        if (ytData.status?.uploadStatus !== "uploaded") {
+            await respond(interaction, {
+                content: `An error occurred while uploading the video\n\`\`\`\n${JSON.stringify(ytData, null, 2)}\n\`\`\``,
+                ephemeral: true
+            });
+            return;
+        }
+        youtubeUrl = `https://www.youtube.com/watch?v=${ytData.id}`;
     }
-    const youtubeUrl = `https://www.youtube.com/watch?v=${ytData.id}`;
 
     // Upload to SoundCloud
     const soundcloudUrl = await uploadSoundcloud(title, `${description}\n\nTags: ${tags ? tags.join(", ") : "N/A"}`, tags || [], audioPath, imagePath);

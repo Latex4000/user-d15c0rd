@@ -1,7 +1,7 @@
 import { AttachmentPayload, ChatInputCommandInteraction, Client, DiscordAPIError, GatewayIntentBits, Message, REST, Routes } from "discord.js";
 import config from "../config.json" with { type: "json" };
 import { commands } from "./commands/index.js";
-import { getYoutubeAccessToken } from "./oauth/youtube.js";
+import youtubeClient from "./oauth/youtube.js";
 
 const rest = new REST({ version: "10" }).setToken(config.discord.token);
 (async () => {
@@ -24,16 +24,9 @@ const discordClient = new Client({
 discordClient.login(config.discord.token).then(async () => {
     console.log("Logged in as " + discordClient.user?.tag);
 
-    const url = await getYoutubeAccessToken();
-    if (!url)
-        return; // Already authenticated
-
-    try {
+    if (await youtubeClient.initialize() === false) {
         const owner = await discordClient.users.fetch(config.discord.owner_id);
-        await owner.send(`Click here to authenticate with youtube: ${url}`);
-    } catch (err) {
-        console.log("Failed to send message to owner. Click here to authenticate with youtube: " + url);
-        console.error(err);
+        await youtubeClient.getAccessToken((message) => owner.send(message))
     }
 });
 
