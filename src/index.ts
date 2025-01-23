@@ -4,14 +4,12 @@ import { commands } from "./commands/index.js";
 import youtubeClient from "./oauth/youtube.js";
 
 const rest = new REST({ version: "10" }).setToken(config.discord.token);
-(async () => {
-    console.log("Started refreshing slash (/) commands.");
 
-    await rest.put(
-        Routes.applicationCommands(config.discord.client_id),
-        { body: commands.map(c => c.data) }
-    );
-})()
+console.log("Started refreshing slash (/) commands.");
+await rest.put(
+    Routes.applicationCommands(config.discord.client_id),
+    { body: commands.map(c => c.data) },
+)
     .then(() => console.log(`Successfully refreshed slash (/) commands`))
     .catch((error) => console.error("An error has occurred in refreshing slash (/) commands", error));
 
@@ -21,8 +19,8 @@ const discordClient = new Client({
     ],
 });
 
-discordClient.login(config.discord.token).then(async () => {
-    console.log("Logged in as " + discordClient.user?.tag);
+discordClient.on("ready", async (discordClient) => {
+    console.log("Logged in as " + discordClient.user.tag);
 
     if (await youtubeClient.initialize() === false) {
         const owner = await discordClient.users.fetch(config.discord.owner_id);
@@ -91,5 +89,7 @@ process.on("SIGINT", async () => {
     await discordClient.destroy();
     process.exit(0);
 });
+
+await discordClient.login(config.discord.token);
 
 export { discordClient };
