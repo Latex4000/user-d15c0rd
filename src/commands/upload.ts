@@ -9,6 +9,7 @@ import config from "../../config.json" with { type: "json" };
 import { fetchHMAC } from "../fetch.js";
 import youtubeClient from "../oauth/youtube.js";
 import { openAsBlob } from "node:fs";
+import { extname } from "node:path";
 
 async function uploadToYoutubeAndSoundcloud(
     interaction: ChatInputCommandInteraction,
@@ -221,8 +222,8 @@ const command: Command = {
             formData.append("title", title);
             formData.append("soundcloudUrl", urls.soundcloudUrl);
             formData.append("youtubeUrl", urls.youtubeUrl);
-            formData.append("track", await openAsBlob(audioPath));
-            formData.append("cover", await openAsBlob(imagePath));
+            formData.append("track", await openAsBlob(audioPath), `track${extname(audioPath)}`);
+            formData.append("cover", await openAsBlob(imagePath), `cover${extname(imagePath)}`);
 
             await fetchHMAC(config.collective.site_url + "/api/sound", "POST", formData)
                 .then(async () => await respond(interaction, { content: `Uploaded to YouTube: ${urls.youtubeUrl}\nUploaded to SoundCloud: ${urls.soundcloudUrl}` }))
