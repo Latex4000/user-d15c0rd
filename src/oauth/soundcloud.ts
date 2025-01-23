@@ -30,7 +30,7 @@ async function getSoundcloudAccessToken() {
                 client_secret: config.soundcloud.client_secret,
                 refresh_token: token.refresh_token,
             }),
-        }).then(res => res.json());
+        }).then(res => res.json() as Promise<RefreshTokenResponse>);
         token = {
             ...token,
             ...res,
@@ -50,13 +50,13 @@ export async function uploadSoundcloud(title: string, description: string, tags:
     formData.append("track[asset_data]", new Blob([await readFile(audioPath)]));
     formData.append("track[artwork_data]", new Blob([await readFile(imagePath)]));
 
-    const res = await fetch("https://api.soundcloud.com/tracks", {
+    const res: { permalink_url: string } = await fetch("https://api.soundcloud.com/tracks", {
         method: "POST",
         headers: {
             "Authorization": `OAuth ${await getSoundcloudAccessToken()}`,
         },
         body: formData,
-    }).then(res => res.json());
+    }).then(res => res.json() as Promise<{ permalink_url: string }>);
 
     return res.permalink_url;
 }
