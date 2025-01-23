@@ -1,7 +1,7 @@
 import { fetchWithHmac } from "@latex4000/fetch-hmac";
 import config from "../config.json" with { type: "json" };
 
-export function fetchHMAC (url: string | URL | globalThis.Request, method: string = "POST", data?: any) {
+export function fetchHMAC<T> (url: string | URL | globalThis.Request, method: string = "POST", data?: any) {
     const body: string | FormData | undefined = data ? data instanceof FormData ? data : JSON.stringify(data) : undefined;
     const headers: Record<string, string> = {};
     if (!(body instanceof FormData))
@@ -13,7 +13,7 @@ export function fetchHMAC (url: string | URL | globalThis.Request, method: strin
     })
         .then(async res => {
             if (res.ok)
-                return res.json();
-            throw new Error(`HTTP Error: ${res.status} ${res.statusText}\n${await res.json().then(data => data.error).catch(() => "")}`);
+                return res.json() as T;
+            throw new Error(`HTTP Error: ${res.status} ${res.statusText}\n${(await res.json() as Promise<{ error: string }>).then(data => data.error).catch(() => "")}`);
         });
 }
