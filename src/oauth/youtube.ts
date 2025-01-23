@@ -40,7 +40,7 @@ class YoutubeClient {
         const codePromise = new Promise<string>((resolve, reject) => {
             const httpServer = createServer();
             httpServer.on("request", (req, res) => {
-                const url = new URL(req.url ?? "/");
+                const url = new URL(req.url ?? "/", "http://localhost/");
                 const code = url.searchParams.get("code");
 
                 if (!code) {
