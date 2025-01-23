@@ -9,7 +9,7 @@ import config from "../../config.json" with { type: "json" };
 import { fetchHMAC } from "../fetch.js";
 import youtubeClient from "../oauth/youtube.js";
 
-async function uploadToYoutubeAndSoundcloud (
+async function uploadToYoutubeAndSoundcloud(
     interaction: ChatInputCommandInteraction,
     audioPath: string,
     imagePath: string,
@@ -18,7 +18,8 @@ async function uploadToYoutubeAndSoundcloud (
     description: string,
     tags: string[]
 ) {
-    let youtubeUrl = '';
+    let soundcloudUrl = "https://example.com/";
+    let youtubeUrl = "https://example.com/";
 
     // Upload to YouTube
     if (youtubeClient.hasAccessToken) {
@@ -34,7 +35,9 @@ async function uploadToYoutubeAndSoundcloud (
     }
 
     // Upload to SoundCloud
-    const soundcloudUrl = await uploadSoundcloud(title, `${description}\n\nTags: ${tags ? tags.join(", ") : "N/A"}`, tags || [], audioPath, imagePath);
+    if (config.soundcloud.client_id) {
+        soundcloudUrl = await uploadSoundcloud(title, `${description}\n\nTags: ${tags ? tags.join(", ") : "N/A"}`, tags || [], audioPath, imagePath);
+    }
 
     // Send to the config.discord.music_feed channel too
     discordClient.channels.fetch(config.discord.music_feed)

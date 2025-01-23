@@ -11,8 +11,10 @@ class YoutubeClient {
     private youtube: youtube_v3.Youtube | undefined;
 
     async initialize(): Promise<boolean | undefined> {
-        if (!config.youtube.client_id)
+        if (!config.youtube.client_id) {
+            console.error("YouTube client not provided, videos will not be uploaded");
             return;
+        }
 
         this.auth = new google.auth.OAuth2(config.youtube.client_id, config.youtube.client_secret, config.youtube.redirect_uris[0]);
         this.youtube = google.youtube("v3");

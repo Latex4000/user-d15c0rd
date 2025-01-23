@@ -2,6 +2,10 @@ import { readFile, writeFile } from "node:fs/promises";
 import config from "../../config.json" with { type: "json" };
 import { createReadStream } from "node:fs";
 
+if (!config.soundcloud.client_id) {
+    console.error("SoundCloud client not provided, tracks will not be uploaded");
+}
+
 interface SoundcloudToken {
     access_token: string;
     token_type: string;
