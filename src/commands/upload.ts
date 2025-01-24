@@ -105,7 +105,8 @@ const command: Command = {
         const image = interaction.options.getAttachment("image");
         const title = interaction.options.getString("title");
         const description = interaction.options.getString("description") || "";
-        const tags = interaction.options.getString("tags")?.split(",").map(tag => tag.trim()) || [];
+        const tagsString = interaction.options.getString("tags") ?? "";
+        const tags = tagsString.length === 0 ? [] : tagsString.split(",").map((tag) => tag.trim());
 
         if (audio === null || image === null || title === null) {
             await respond(interaction, { content: "You must provide both an audio and image file, and a title", ephemeral: true });
@@ -224,6 +225,9 @@ const command: Command = {
             formData.append("youtubeUrl", urls.youtubeUrl);
             formData.append("track", await openAsBlob(audioPath), `track${extname(audioPath)}`);
             formData.append("cover", await openAsBlob(imagePath), `cover${extname(imagePath)}`);
+            if (tagsString) {
+                formData.append("tags", tagsString);
+            }
 
             await fetchHMAC(config.collective.site_url + "/api/sound", "POST", formData)
                 .then(async () => await respond(interaction, { content: `Uploaded to YouTube: ${urls.youtubeUrl}\nUploaded to SoundCloud: ${urls.soundcloudUrl}` }))
