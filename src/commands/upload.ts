@@ -1,6 +1,6 @@
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle, ChatInputCommandInteraction, MessageComponentInteraction, SlashCommandBuilder } from "discord.js";
 import { Command } from "./index.js";
-import { unlink, writeFile } from "node:fs/promises";
+import { mkdir, unlink, writeFile } from "node:fs/promises";
 import { discordClient, respond } from "../index.js";
 import { uploadSoundcloud } from "../oauth/soundcloud.js";
 import { exec } from "node:child_process";
@@ -174,9 +174,11 @@ const command: Command = {
         if (!result)
             return;
 
+        await mkdir(".tmp", { recursive: true });
+
         // Download files and save them with a hashed name
-        const audioPath = `./tmp/${createHash("sha256").update(audio.url).digest("hex")}${audio.url.endsWith(".mp3") ? ".mp3" : ".wav"}`;
-        const imagePath = `./tmp/${createHash("sha256").update(image.url).digest("hex")}${image.url.endsWith(".png") ? ".png" : ".jpg"}`;
+        const audioPath = `./.tmp/${createHash("sha256").update(audio.url).digest("hex")}${audio.name.endsWith(".mp3") ? ".mp3" : ".wav"}`;
+        const imagePath = `./.tmp/${createHash("sha256").update(image.url).digest("hex")}${image.name.endsWith(".png") ? ".png" : ".jpg"}`;
         await fetch(audio.url).then(res => res.blob()).then(async blob => {
             await writeFile(audioPath, Buffer.from(await blob.arrayBuffer()));
         });
@@ -184,9 +186,14 @@ const command: Command = {
             await writeFile(imagePath, Buffer.from(await blob.arrayBuffer()));
         });
 
+        const fakeExec = (
+            command: string,
+            callback: (error: null, stdout: string, stderr: string) => void,
+        ) => callback(null, "", "");
+
         // Run ffmpeg to create a video file
-        const videoPath = `./tmp/${interaction.user.id}.mp4`;
-        exec(`ffmpeg -loop 1 -i "${imagePath}" -i "${audioPath}" -vf "scale='min(1920, floor(iw/2)*2)':-2,format=yuv420p" -c:v libx264 -preset medium -profile:v main -c:a aac -shortest -movflags +faststart ${videoPath}`, async (err, stdout, stderr) => {
+        const videoPath = `./.tmp/${interaction.user.id}.mp4`;
+        (canUseYoutube ? exec : fakeExec)(`ffmpeg -loop 1 -i "${imagePath}" -i "${audioPath}" -vf "scale='min(1920, floor(iw/2)*2)':-2,format=yuv420p" -c:v libx264 -preset medium -profile:v main -c:a aac -shortest -movflags +faststart ${videoPath}`, async (err, stdout, stderr) => {
             if (err) {
                 await respond(interaction, {
                     content: `An error occurred while processing the files\n\`\`\`\n${stderr}\n\`\`\``,
@@ -209,7 +216,7 @@ const command: Command = {
 
             // Delete the temporary video file and the downloaded files
             const deleteTemporaryFiles = () => Promise.allSettled([
-                unlink(videoPath),
+                canUseYoutube ? unlink(videoPath) : Promise.resolve(),
                 unlink(audioPath),
                 unlink(imagePath),
             ]).catch((error) => console.error("Failed to delete temporary files", error));
