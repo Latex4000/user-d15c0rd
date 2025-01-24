@@ -34,6 +34,14 @@ if (
 export const canUseSoundcloud = Boolean(config.soundcloud.client_id);
 export const canUseYoutube = Boolean(config.youtube.client_id);
 
+if (!canUseSoundcloud) {
+	console.error("SoundCloud client not provided, tracks will not be uploaded");
+}
+
+if (!canUseYoutube) {
+	console.error("YouTube client not provided, videos will not be uploaded");
+}
+
 export function siteUrl(url: string | { toString: () => string }): URL {
 	return new URL(url, config.collective.site_url);
 }

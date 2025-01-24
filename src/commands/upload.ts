@@ -9,7 +9,7 @@ import { fetchHMAC } from "../fetch.js";
 import youtubeClient from "../oauth/youtube.js";
 import { openAsBlob } from "node:fs";
 import { extname } from "node:path";
-import config, { siteUrl } from "../config.js";
+import config, { canUseSoundcloud, canUseYoutube, siteUrl } from "../config.js";
 
 async function uploadToYoutubeAndSoundcloud(
     interaction: ChatInputCommandInteraction,
@@ -24,7 +24,7 @@ async function uploadToYoutubeAndSoundcloud(
     let youtubeUrl = "https://example.com/";
 
     // Upload to YouTube
-    if (youtubeClient.hasAccessToken) {
+    if (canUseYoutube) {
         const ytData = await youtubeClient.upload(title, `${description}\n\nTags: ${tags.length > 0 ? tags.join(", ") : "N/A"}`, tags, videoPath);
         if (ytData.status?.uploadStatus !== "uploaded") {
             await respond(interaction, {
@@ -37,7 +37,7 @@ async function uploadToYoutubeAndSoundcloud(
     }
 
     // Upload to SoundCloud
-    if (config.soundcloud.client_id) {
+    if (canUseSoundcloud) {
         soundcloudUrl = await uploadSoundcloud(title, `${description}\n\nTags: ${tags ? tags.join(", ") : "N/A"}`, tags || [], audioPath, imagePath);
     }
 

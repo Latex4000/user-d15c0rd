@@ -2,17 +2,15 @@ import { Auth, google, youtube_v3 } from "googleapis";
 import { createReadStream } from "node:fs";
 import { createServer } from "node:http";
 import { readFile, writeFile } from "node:fs/promises";
-import config from "../config.js";
+import config, { canUseYoutube } from "../config.js";
 
 class YoutubeClient {
-    hasAccessToken: boolean = false;
-
     private auth: Auth.OAuth2Client | undefined;
+    private hasAccessToken: boolean = false;
     private youtube: youtube_v3.Youtube | undefined;
 
     async initialize(): Promise<boolean | undefined> {
-        if (!config.youtube.client_id) {
-            console.error("YouTube client not provided, videos will not be uploaded");
+        if (!canUseYoutube) {
             return;
         }
 
