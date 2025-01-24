@@ -3,7 +3,8 @@ import { Command } from "./index.js";
 import AdmZip from "adm-zip";
 import { fetchHMAC } from "../fetch.js";
 import { Word } from "../types/word.js";
-import { siteUrl } from "../config.js";
+import config, { siteUrl } from "../config.js";
+import { discordClient } from "../index.js";
 
 const fileSizeLimit = 2 ** 20; // 1 MB
 
@@ -113,6 +114,14 @@ const command: Command = {
         // Send form data to the server
         await fetchHMAC<Word>(siteUrl("/api/words"), "POST", formData)
             .then(async word => {
+                discordClient.channels.fetch(config.discord.feed)
+                    .then(async channel => {
+                        if (channel?.isSendable())
+                            await channel.send({ content: `Uploaded by <@${interaction.user.id}>\n**Link:** ${config.collective.site_url}/words/${Math.floor(new Date(word.date).getTime() / 1000).toString(10)}` });
+                        else
+                            console.error("Failed to send message to feed channel: Channel is not sendable");
+                    })
+                    .catch(err => console.error("Failed to send message to feed channel", err));
                 await interaction.followUp({ content: `Post uploaded successfully\n**Link:** ${siteUrl(`/words/${Math.floor(new Date(word.date).getTime() / 1000).toString(10)}`)}` });
             })
             .catch(async e => {

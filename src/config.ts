@@ -25,7 +25,7 @@ if (
 	!config.discord.client_id ||
 	!config.discord.token ||
 	!config.discord.owner_id ||
-	!config.discord.music_feed
+	!config.discord.feed
 ) {
 	console.error("Invalid required config (secret_hmac, collective, discord)");
 	process.exit(1);

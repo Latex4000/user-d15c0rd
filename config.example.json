@@ -9,7 +9,7 @@
         "client_id": "",
         "token": "",
         "owner_id": "",
-        "music_feed": ""
+        "feed": ""
     },
     "youtube": {
         "client_id": "",
