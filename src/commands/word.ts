@@ -2,8 +2,8 @@ import { ChatInputCommandInteraction, SlashCommandBuilder } from "discord.js";
 import { Command } from "./index.js";
 import AdmZip from "adm-zip";
 import { fetchHMAC } from "../fetch.js";
-import config from "../../config.json" with { type: "json" };
 import { Word } from "../types/word.js";
+import { siteUrl } from "../config.js";
 
 const fileSizeLimit = 2 ** 20; // 1 MB
 
@@ -111,9 +111,9 @@ const command: Command = {
         }
 
         // Send form data to the server
-        await fetchHMAC<Word>(`${config.collective.site_url}/api/words`, "POST", formData)
+        await fetchHMAC<Word>(siteUrl("/api/words"), "POST", formData)
             .then(async word => {
-                await interaction.followUp({ content: `Post uploaded successfully\n**Link:** ${config.collective.site_url}/words/${Math.floor(new Date(word.date).getTime() / 1000).toString(10)}` });
+                await interaction.followUp({ content: `Post uploaded successfully\n**Link:** ${siteUrl(`/words/${Math.floor(new Date(word.date).getTime() / 1000).toString(10)}`)}` });
             })
             .catch(async e => {
                 await interaction.followUp({ content: `An error occurred while uploading the post\n\`\`\`\n${e}\n\`\`\``, ephemeral: true });

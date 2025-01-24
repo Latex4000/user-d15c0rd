@@ -1,8 +1,8 @@
 import { ChatInputCommandInteraction, SlashCommandBuilder } from "discord.js";
 import { Command } from "./index.js";
-import config from "../../config.json" with { type: "json" };
 import { fetchHMAC } from "../fetch.js";
 import { Member, memberInfo } from "../types/member.js";
+import { siteUrl } from "../config.js";
 
 const command: Command = {
     data: new SlashCommandBuilder()
@@ -14,7 +14,7 @@ const command: Command = {
         // Get JSON Data
         let member: Member | undefined = undefined;
         try {
-            const data: Member[] = await fetchHMAC(`${config.collective.site_url}/api/member?id=${interaction.user.id}`, "GET");
+            const data: Member[] = await fetchHMAC(siteUrl(`/api/member?id=${interaction.user.id}`), "GET");
             if (data.length)
                 member = data[0];
         } catch (e) {
@@ -40,7 +40,7 @@ const command: Command = {
 
         member.addedRingToSite = true;
 
-        await fetchHMAC<Member[]>(config.collective.site_url + "/api/member", "PUT", member)
+        await fetchHMAC<Member[]>(siteUrl("/api/member"), "PUT", member)
             .then(async members => {
                 const member = members[0];
                 if (!member)

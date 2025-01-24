@@ -5,11 +5,11 @@ import { discordClient, respond } from "../index.js";
 import { uploadSoundcloud } from "../oauth/soundcloud.js";
 import { exec } from "node:child_process";
 import { createHash, randomUUID } from "node:crypto";
-import config from "../../config.json" with { type: "json" };
 import { fetchHMAC } from "../fetch.js";
 import youtubeClient from "../oauth/youtube.js";
 import { openAsBlob } from "node:fs";
 import { extname } from "node:path";
+import config, { siteUrl } from "../config.js";
 
 async function uploadToYoutubeAndSoundcloud(
     interaction: ChatInputCommandInteraction,
@@ -229,7 +229,7 @@ const command: Command = {
                 formData.append("tags", tagsString);
             }
 
-            await fetchHMAC(config.collective.site_url + "/api/sound", "POST", formData)
+            await fetchHMAC(siteUrl("/api/sound"), "POST", formData)
                 .then(async () => await respond(interaction, { content: `Uploaded to YouTube: ${urls.youtubeUrl}\nUploaded to SoundCloud: ${urls.soundcloudUrl}` }))
                 .catch(async (err) => await respond(interaction, { content: `An error occurred while uploading the song\n\`\`\`\n${err}\n\`\`\``, ephemeral: true }));
 

@@ -1,8 +1,8 @@
 import { Auth, google, youtube_v3 } from "googleapis";
-import config from "../../config.json" with { type: "json" };
 import { createReadStream } from "node:fs";
 import { createServer } from "node:http";
 import { readFile, writeFile } from "node:fs/promises";
+import config from "../config.js";
 
 class YoutubeClient {
     hasAccessToken: boolean = false;

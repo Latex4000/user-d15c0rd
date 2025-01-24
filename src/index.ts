@@ -1,7 +1,7 @@
 import { AttachmentPayload, ChatInputCommandInteraction, Client, DiscordAPIError, GatewayIntentBits, Message, REST, Routes } from "discord.js";
-import config from "../config.json" with { type: "json" };
 import { commands } from "./commands/index.js";
 import youtubeClient from "./oauth/youtube.js";
+import config from "./config.js";
 
 const rest = new REST({ version: "10" }).setToken(config.discord.token);
 

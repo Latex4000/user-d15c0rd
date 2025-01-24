@@ -1,5 +1,5 @@
 import { fetchWithHmac } from "@latex4000/fetch-hmac";
-import config from "../config.json" with { type: "json" };
+import config from "./config.js";
 
 export function fetchHMAC<T> (url: string | URL | globalThis.Request, method: string = "POST", data?: any) {
     const body: string | FormData | undefined = data ? data instanceof FormData ? data : JSON.stringify(data) : undefined;
