@@ -84,7 +84,7 @@ process.on("SIGINT", async () => {
         await rest.put(
             Routes.applicationCommands(config.discord.client_id),
             { body: [] }
-        );
+        ).catch(console.error);
 
     await discordClient.destroy();
     process.exit(0);
