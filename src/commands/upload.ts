@@ -171,8 +171,10 @@ const command: Command = {
             });
         });
 
-        if (!result)
+        if (!result) {
+            await respond(interaction, { content: "Cancelled", ephemeral: true });
             return;
+        }
 
         await mkdir(".tmp", { recursive: true });
 
