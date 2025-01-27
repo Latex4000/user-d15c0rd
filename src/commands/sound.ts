@@ -255,7 +255,7 @@ const command: Command = {
             if (tagsString)
                 formData.append("tags", tagsString);
 
-            await fetchHMAC(siteUrl("/api/sound"), "POST", formData)
+            await fetchHMAC(siteUrl("/api/sounds"), "POST", formData)
                 .then(async () => await respond(interaction, { content: `Uploaded to YouTube: ${urls.youtubeUrl}\nUploaded to SoundCloud: ${urls.soundcloudUrl}` }))
                 .catch(async (err) => await respond(interaction, { content: `An error occurred while uploading the song\n\`\`\`\n${err}\n\`\`\``, ephemeral: true }));
         } catch (err) {
