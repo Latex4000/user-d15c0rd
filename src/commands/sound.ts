@@ -190,7 +190,7 @@ const command: Command = {
         }
 
         // Confirmation that the person's information is correct, and the image aspect ratio is correct
-        const update = await confirm(interaction, `Title: ${title}\nDescription: ${description || "N/A"}\nTags: ${tags.length > 0 ? tags.join(", ") : "N/A"}\n\nNote that if your image has a vertical (tall)/square aspect ratio, it may end up being uploaded as a short instead.\nIf you don't want, then ensure your image is wide\n\nIs all of your information correct?`);
+        const update = await confirm(interaction, `Title: ${title}\nDescription: ${description || "N/A"}\nTags: ${tags.length > 0 ? tags.join(", ") : "N/A"}\n\nNote that if your ${video ? "video" : "image"} has a vertical (tall)/square aspect ratio, it may end up being uploaded as a short instead.\nIf you don't want, then ensure your ${video ? "video" : "image"} is wide\n\nIs all of your information correct?`);
         if (!update)
             return;
 
