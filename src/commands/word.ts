@@ -12,7 +12,7 @@ const fileSizeLimit = 2 ** 20; // 1 MB
 const command: Command = {
     data: new SlashCommandBuilder()
         .setName("word")
-        .setDescription("Upload post to the webring; all files have a 1 MB limit")
+        .setDescription("Upload a writeup u made to the webring; all files have a 1 MB limit")
         .addAttachmentOption(option =>
             option
                 .setName("md_txt_file")

@@ -63,8 +63,8 @@ async function uploadToYoutubeAndSoundcloud(
 
 const command: Command = {
     data: new SlashCommandBuilder()
-        .setName("upload")
-        .setDescription("Upload a song to the funny collective channel")
+        .setName("sound")
+        .setDescription("Upload a song u made to the webring")
         .addAttachmentOption(option =>
             option
                 .setName("audio")
