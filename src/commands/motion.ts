@@ -147,7 +147,7 @@ const command: Command = {
         
         try {
             // Upload the video to YouTube
-            const ytData = await youtubeClient.upload(title, `${description}\n\nTags: ${tags.length > 0 ? tags.join(", ") : "N/A"}`, tags, videoPath, imagePath);
+            const ytData = await youtubeClient.upload(title, `${description}\n\nTags: ${tags.length > 0 ? tags.join(", ") : "N/A"}`, tags, videoPath, "motions", imagePath);
             if (ytData.status?.uploadStatus !== "uploaded") {
                 await respond(interaction, {
                     content: `An error occurred while uploading the video\n\`\`\`\n${JSON.stringify(ytData, null, 2)}\n\`\`\``,

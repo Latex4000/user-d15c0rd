@@ -18,7 +18,11 @@
         "token_uri": "",
         "auth_provider_x509_cert_url": "",
         "client_secret": "",
-        "redirect_uris": [""]
+        "redirect_uris": [""],
+        "playlists": {
+            "sounds": "",
+            "motions": ""
+        }
     },
     "soundcloud": {
         "client_id": "",

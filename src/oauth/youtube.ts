@@ -62,7 +62,7 @@ class YoutubeClient {
 
         const url = this.auth.generateAuthUrl({
             access_type: "offline",
-            scope: ["https://www.googleapis.com/auth/youtube.upload"],
+            scope: ["https://www.googleapis.com/auth/youtube"],
         });
         await _sendMessageToOwner(`Click here to authenticate with YouTube: ${url}`);
 
@@ -79,7 +79,7 @@ class YoutubeClient {
         }
     }
 
-    async upload(title: string, description: string, tags: string[], videoPath: string, imagePath?: string): Promise<youtube_v3.Schema$Video> {
+    async upload(title: string, description: string, tags: string[], videoPath: string, uploadType: "sounds" | "motions", imagePath?: string): Promise<youtube_v3.Schema$Video> {
         if (this.auth == null || this.youtube == null || !this.hasAccessToken)
             throw new Error("YouTube client not initialized");
 
@@ -115,6 +115,23 @@ class YoutubeClient {
                     body: createReadStream(imagePath),
                 },
             })
+
+        // Add to playlist
+        const playlistID = config.youtube.playlists[uploadType];
+        if (playlistID)
+            await this.youtube.playlistItems.insert({
+                auth: this.auth,
+                part: ["snippet"],
+                requestBody: {
+                    snippet: {
+                        playlistId: playlistID,
+                        resourceId: {
+                            kind: "youtube#video",
+                            videoId: videoID,
+                        },
+                    },
+                },
+            });
 
         return video;
     }
