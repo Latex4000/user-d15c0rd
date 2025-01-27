@@ -43,6 +43,12 @@ const command: Command = {
                 .setDescription("Optional comma-separated tags for the motion")
                 .setRequired(false)
         )
+        .addAttachmentOption(option =>
+            option
+                .setName("thumbnail")
+                .setDescription("Thumbnail image for motion")
+                .setRequired(false)
+        )
         .setDMPermission(false),
     run: async (interaction: ChatInputCommandInteraction) => {
         await interaction.deferReply();
@@ -58,13 +64,21 @@ const command: Command = {
         const description = interaction.options.getString("description") || "";
         const tagsString = interaction.options.getString("tags") ?? "";
         const tags = tagsString.length === 0 ? [] : tagsString.split(",").map((tag) => tag.trim());
+        const thumbnail = interaction.options.getAttachment("thumbnail");
 
         if (video === null || title === null) {
             await respond(interaction, { content: "You must provide both a video file, and a title", ephemeral: true });
             return;
         }
 
+        // Check if the image file is a png or jpg
+        if (thumbnail && (!thumbnail.name.endsWith(".png") && !thumbnail.name.endsWith(".jpg"))) {
+            await respond(interaction, { content: "The thumbnail must be a png or jpg file", ephemeral: true });
+            return;
+        }
+
         // Check if the video file is suitable for youtube
+        await mkdir(".tmp", { recursive: true });
         const videoPath = `./.tmp/${interaction.user.id}.mp4`;
         if (video) {
             if (!validExtensions.includes(extname(video.name))) {
@@ -122,15 +136,18 @@ const command: Command = {
         const ownWork = await confirm(interaction, "This is for content that you made yourself, and doesn't contain content that would nuke the channels\nIs this your own work?");
         if (!ownWork)
             return;
-
-        await mkdir(".tmp", { recursive: true });
-
-        // Const to delete the temporary video file
-        const deleteVideo = () => unlink(videoPath).catch((error) => console.error("Failed to delete temporary files", error));
+        
+        let imagePath: string | undefined = undefined;
+        if (thumbnail) {
+            imagePath = `./.tmp/${createHash("sha256").update(thumbnail.url).digest("hex")}${thumbnail.name.endsWith(".png") ? ".png" : ".jpg"}`;
+            await fetch(thumbnail.url).then(res => res.blob()).then(async blob => {
+                await writeFile(imagePath!, Buffer.from(await blob.arrayBuffer()));
+            });
+        }
         
         try {
             // Upload the video to YouTube
-            const ytData = await youtubeClient.upload(title, `${description}\n\nTags: ${tags.length > 0 ? tags.join(", ") : "N/A"}`, tags, videoPath);
+            const ytData = await youtubeClient.upload(title, `${description}\n\nTags: ${tags.length > 0 ? tags.join(", ") : "N/A"}`, tags, videoPath, imagePath);
             if (ytData.status?.uploadStatus !== "uploaded") {
                 await respond(interaction, {
                     content: `An error occurred while uploading the video\n\`\`\`\n${JSON.stringify(ytData, null, 2)}\n\`\`\``,
@@ -172,7 +189,10 @@ const command: Command = {
                 ephemeral: true
             });
         }
-        await deleteVideo();
+        await Promise.allSettled([
+            imagePath ? unlink(imagePath) : Promise.resolve(),
+            unlink(videoPath),
+        ]).catch((error) => console.error("Failed to delete temporary files", error));
         return;
     },
 }
