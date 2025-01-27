@@ -10,6 +10,7 @@ import youtubeClient from "../oauth/youtube.js";
 import { openAsBlob } from "node:fs";
 import { extname } from "node:path";
 import config, { canUseSoundcloud, canUseYoutube, siteUrl } from "../config.js";
+import confirm from "../confirm.js";
 
 const validExtensions = [".mp4", ".mov", ".mkv", ".avi", ".wmv"];
 
@@ -189,55 +190,13 @@ const command: Command = {
         }
 
         // Confirmation that the person's information is correct, and the image aspect ratio is correct
-        const ids = {
-            yes: randomUUID(),
-            no: randomUUID(),
-        };
-        const update = await interaction.channel.send({
-            content: `Title: ${title}\nDescription: ${description || "N/A"}\nTags: ${tags.length > 0 ? tags.join(", ") : "N/A"}\n\nNote that if your image has a vertical (tall)/square aspect ratio, it may end up being uploaded as a short instead.\nIf you don't want, then ensure your image is wide\n\nIs all of your information correct?`,
-            components: [
-                new ActionRowBuilder<ButtonBuilder>()
-                    .addComponents(
-                        new ButtonBuilder()
-                            .setCustomId(ids.yes)
-                            .setLabel("Yes")
-                            .setStyle(ButtonStyle.Success),
-                        new ButtonBuilder()
-                            .setCustomId(ids.no)
-                            .setLabel("No")
-                            .setStyle(ButtonStyle.Danger)
-                    )
-            ]
-        });
-
-        const result = await new Promise<boolean>(resolve => {
-            const filter = (i: MessageComponentInteraction) => i.user.id === interaction.user.id;
-            const confirmationCollector = update.createMessageComponentCollector({ filter, time: 60000 });
-            let timeout = true;
-            confirmationCollector.on("collect", async i => {
-                timeout = false;
-                if (i.customId === ids.yes) {
-                    await update.delete();
-                    confirmationCollector.stop();
-                    resolve(true);
-                } else if (i.customId === ids.no) {
-                    await update.delete();
-                    confirmationCollector.stop();
-                    resolve(false);
-                }
-            });
-            confirmationCollector.on("end", () => {
-                if (timeout) {
-                    interaction.followUp({ content: "You took too long to respond", ephemeral: true });
-                    resolve(false);
-                }
-            });
-        });
-
-        if (!result) {
-            await respond(interaction, { content: "Cancelled", ephemeral: true });
+        const update = await confirm(interaction, `Title: ${title}\nDescription: ${description || "N/A"}\nTags: ${tags.length > 0 ? tags.join(", ") : "N/A"}\n\nNote that if your image has a vertical (tall)/square aspect ratio, it may end up being uploaded as a short instead.\nIf you don't want, then ensure your image is wide\n\nIs all of your information correct?`);
+        if (!update)
             return;
-        }
+
+        const ownWork = await confirm(interaction, "This is for content that you made yourself, and doesn't contain content that would nuke the channels\nIs this your own work?");
+        if (!ownWork)
+            return;
 
         await mkdir(".tmp", { recursive: true });
 

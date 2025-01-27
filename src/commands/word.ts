@@ -5,6 +5,7 @@ import { fetchHMAC } from "../fetch.js";
 import { Word } from "../types/word.js";
 import config, { siteUrl } from "../config.js";
 import { discordClient } from "../index.js";
+import confirm from "../confirm.js";
 
 const fileSizeLimit = 2 ** 20; // 1 MB
 
@@ -77,6 +78,10 @@ const command: Command = {
             await interaction.followUp({ content: "You cannot include assets with a `.txt` file.\nAssets are primarily only for markdown files for if you need to attach images to them.\nPlease remove the assets file and try again.", ephemeral: true });
             return;
         }
+
+        const ownWork = await confirm(interaction, "This is for content that you made yourself\nIs this your own work?");
+        if (!ownWork)
+            return;
 
         const formData = new FormData();
         formData.append("discord", interaction.user.id);
