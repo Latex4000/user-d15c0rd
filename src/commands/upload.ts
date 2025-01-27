@@ -11,6 +11,8 @@ import { openAsBlob } from "node:fs";
 import { extname } from "node:path";
 import config, { canUseSoundcloud, canUseYoutube, siteUrl } from "../config.js";
 
+const validExtensions = [".mp4", ".mov", ".mkv", ".avi", ".wmv"];
+
 async function uploadToYoutubeAndSoundcloud(
     interaction: ChatInputCommandInteraction,
     audioPath: string,
@@ -79,6 +81,12 @@ const command: Command = {
                 .setDescription("The title of the song")
                 .setRequired(true)
         )
+        .addAttachmentOption(option =>
+            option
+                .setName("video")
+                .setDescription("The video file to upload for youtube (mp4 recommended)")
+                .setRequired(false)
+        )
         .addStringOption(option =>
             option
                 .setName("description")
@@ -103,6 +111,7 @@ const command: Command = {
 
         const audio = interaction.options.getAttachment("audio");
         const image = interaction.options.getAttachment("image");
+        const video = interaction.options.getAttachment("video");
         const title = interaction.options.getString("title");
         const description = interaction.options.getString("description") || "";
         const tagsString = interaction.options.getString("tags") ?? "";
@@ -123,6 +132,59 @@ const command: Command = {
         if (!image.name.endsWith(".png") && !image.name.endsWith(".jpg")) {
             await respond(interaction, { content: "The image file must be a png or jpg file", ephemeral: true });
             return;
+        }
+
+        // Check if the video file is suitable for youtube
+        const videoPath = `./.tmp/${interaction.user.id}.mp4`;
+        if (video) {
+            if (!validExtensions.includes(extname(video.name))) {
+                await respond(interaction, { content: "The video file must be an mp4 file", ephemeral: true });
+                return;
+            }
+            await fetch(video.url).then(res => res.blob()).then(async blob => {
+                await writeFile(videoPath, Buffer.from(await blob.arrayBuffer()));
+            });
+
+            // Run ffprobe to check the video file
+            try {
+                await new Promise<void>((resolve, reject) => {
+                    exec(`ffprobe -v error -show_entries format=filename,format_name,duration -show_entries stream=index,codec_name,codec_type,width,height,r_frame_rate -of default=noprint_wrappers=1 ${videoPath}`, async (err, stdout, stderr) => {
+                        if (err)
+                            return reject(err);
+
+                        // Check if the container and codec are suitable, and if there is audio (and only one audio stream)
+                        const lines = stdout.split("\n");
+                        let videoStream = false;
+                        let videoStreams = 0;
+                        let audioStream = false;
+                        let audioStreams = 0;
+                        for (const line of lines) {
+                            if (line.startsWith("codec_name="))
+                                if (!["h264", "aac"].includes(line.split("=")[1])) 
+                                    return reject("The video file must be h264 video and aac audio");
+
+                            if (line.startsWith("codec_type=video")) {
+                                videoStream = true;
+                                videoStreams++;
+                            } else if (line.startsWith("codec_type=audio")) {
+                                audioStream = true;
+                                audioStreams++;
+                            }
+                        }
+                        if (!videoStream || !audioStream || videoStreams !== 1 || audioStreams !== 1)
+                            return reject("The video file must have exactly one video stream and one audio stream");
+
+                        resolve();
+                    });
+                });
+            } catch (err) {
+                await respond(interaction, {
+                    content: `An error occurred while checking the video file\n\`\`\`\n${err}\n\`\`\``,
+                    ephemeral: true
+                });
+                await unlink(videoPath);
+                return;
+            }
         }
 
         // Confirmation that the person's information is correct, and the image aspect ratio is correct
@@ -188,20 +250,23 @@ const command: Command = {
             await writeFile(imagePath, Buffer.from(await blob.arrayBuffer()));
         });
 
-        const fakeExec = (
-            command: string,
-            callback: (error: null, stdout: string, stderr: string) => void,
-        ) => callback(null, "", "");
-
-        // Run ffmpeg to create a video file
-        const videoPath = `./.tmp/${interaction.user.id}.mp4`;
-        (canUseYoutube ? exec : fakeExec)(`ffmpeg -loop 1 -i "${imagePath}" -i "${audioPath}" -vf "scale='min(1920, floor(iw/2)*2)':-2,format=yuv420p" -c:v libx264 -preset medium -profile:v main -c:a aac -shortest -movflags +faststart ${videoPath}`, async (err, stdout, stderr) => {
-            if (err) {
-                await respond(interaction, {
-                    content: `An error occurred while processing the files\n\`\`\`\n${stderr}\n\`\`\``,
-                    ephemeral: true,
+        // Const to delete the temporary video file and the downloaded files
+        const deleteTemporaryFiles = () => Promise.allSettled([
+            canUseYoutube ? unlink(videoPath) : Promise.resolve(),
+            unlink(audioPath),
+            unlink(imagePath),
+        ]).catch((error) => console.error("Failed to delete temporary files", error));
+        
+        try {
+            if (canUseYoutube && !video) {
+                // Run ffmpeg to create a video file
+                await new Promise<void>((resolve, reject) => {
+                    exec(`ffmpeg -loop 1 -i "${imagePath}" -i "${audioPath}" -vf "scale='min(1920, floor(iw/2)*2)':-2,format=yuv420p" -c:v libx264 -preset medium -profile:v main -c:a aac -shortest -movflags +faststart ${videoPath}`, async (err, stdout, stderr) => {
+                        if (err)
+                            return reject(err);
+                        resolve();
+                    });
                 });
-                return;
             }
 
             // Upload the video to YouTube
@@ -216,13 +281,6 @@ const command: Command = {
                 return;
             }
 
-            // Delete the temporary video file and the downloaded files
-            const deleteTemporaryFiles = () => Promise.allSettled([
-                canUseYoutube ? unlink(videoPath) : Promise.resolve(),
-                unlink(audioPath),
-                unlink(imagePath),
-            ]).catch((error) => console.error("Failed to delete temporary files", error));
-
             if (!urls) {
                 await deleteTemporaryFiles();
                 return;
@@ -234,16 +292,20 @@ const command: Command = {
             formData.append("youtubeUrl", urls.youtubeUrl);
             formData.append("track", await openAsBlob(audioPath), `track${extname(audioPath)}`);
             formData.append("cover", await openAsBlob(imagePath), `cover${extname(imagePath)}`);
-            if (tagsString) {
+            if (tagsString)
                 formData.append("tags", tagsString);
-            }
 
             await fetchHMAC(siteUrl("/api/sound"), "POST", formData)
                 .then(async () => await respond(interaction, { content: `Uploaded to YouTube: ${urls.youtubeUrl}\nUploaded to SoundCloud: ${urls.soundcloudUrl}` }))
                 .catch(async (err) => await respond(interaction, { content: `An error occurred while uploading the song\n\`\`\`\n${err}\n\`\`\``, ephemeral: true }));
-
-            await deleteTemporaryFiles();
-        });
+        } catch (err) {
+            await respond(interaction, {
+                content: `An error occurred while creating the video\n\`\`\`\n${err}\n\`\`\``,
+                ephemeral: true
+            });
+        }
+        await deleteTemporaryFiles();
+        return;
     },
 }
 
