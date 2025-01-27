@@ -1,0 +1,180 @@
+import { ActionRowBuilder, ButtonBuilder, ButtonStyle, ChatInputCommandInteraction, MessageComponentInteraction, SlashCommandBuilder } from "discord.js";
+import { Command } from "./index.js";
+import { mkdir, unlink, writeFile } from "node:fs/promises";
+import { discordClient, respond } from "../index.js";
+import { uploadSoundcloud } from "../oauth/soundcloud.js";
+import { exec } from "node:child_process";
+import { createHash, randomUUID } from "node:crypto";
+import { fetchHMAC } from "../fetch.js";
+import youtubeClient from "../oauth/youtube.js";
+import { openAsBlob } from "node:fs";
+import { extname } from "node:path";
+import config, { canUseSoundcloud, canUseYoutube, siteUrl } from "../config.js";
+import confirm from "../confirm.js";
+import { Motion } from "../types/motion.js";
+
+const validExtensions = [".mp4", ".mov", ".mkv", ".avi", ".wmv"];
+
+const command: Command = {
+    data: new SlashCommandBuilder()
+        .setName("motion")
+        .setDescription("Upload a motion u made to the webring")
+        .addAttachmentOption(option =>
+            option
+                .setName("video")
+                .setDescription("The video file to upload (mp4 recommended)")
+                .setRequired(true)
+        )
+        .addStringOption(option =>
+            option
+                .setName("title")
+                .setDescription("The title of the motion")
+                .setRequired(true)
+        )
+        .addStringOption(option =>
+            option
+                .setName("description")
+                .setDescription("A description for the motion if wanted")
+                .setRequired(false)
+        )
+        .addStringOption(option =>
+            option
+                .setName("tags")
+                .setDescription("Optional comma-separated tags for the motion")
+                .setRequired(false)
+        )
+        .setDMPermission(false),
+    run: async (interaction: ChatInputCommandInteraction) => {
+        await interaction.deferReply();
+
+        if (!interaction.channel?.isSendable()) {
+            // WHAT?
+            await respond(interaction, { content: "I cannot send messages in this channel", ephemeral: true });
+            return;
+        }
+
+        const video = interaction.options.getAttachment("video");
+        const title = interaction.options.getString("title");
+        const description = interaction.options.getString("description") || "";
+        const tagsString = interaction.options.getString("tags") ?? "";
+        const tags = tagsString.length === 0 ? [] : tagsString.split(",").map((tag) => tag.trim());
+
+        if (video === null || title === null) {
+            await respond(interaction, { content: "You must provide both a video file, and a title", ephemeral: true });
+            return;
+        }
+
+        // Check if the video file is suitable for youtube
+        const videoPath = `./.tmp/${interaction.user.id}.mp4`;
+        if (video) {
+            if (!validExtensions.includes(extname(video.name))) {
+                await respond(interaction, { content: "The video file must be an mp4 file", ephemeral: true });
+                return;
+            }
+            await fetch(video.url).then(res => res.blob()).then(async blob => {
+                await writeFile(videoPath, Buffer.from(await blob.arrayBuffer()));
+            });
+
+            // Run ffprobe to check the video file
+            try {
+                await new Promise<void>((resolve, reject) => {
+                    exec(`ffprobe -v error -show_entries format=filename,format_name,duration -show_entries stream=index,codec_name,codec_type,width,height,r_frame_rate -of default=noprint_wrappers=1 ${videoPath}`, async (err, stdout, stderr) => {
+                        if (err)
+                            return reject(err);
+
+                        // Check if the container and codec are suitable, and if there is audio (and only one audio stream)
+                        const lines = stdout.split("\n");
+                        let videoStream = false;
+                        let videoStreams = 0;
+                        let audioStreams = 0;
+                        for (const line of lines) {
+                            if (line.startsWith("codec_name="))
+                                if (!["h264", "aac"].includes(line.split("=")[1])) 
+                                    return reject("The video file must be h264 video and aac audio");
+
+                            if (line.startsWith("codec_type=video")) {
+                                videoStream = true;
+                                videoStreams++;
+                            } else if (line.startsWith("codec_type=audio"))
+                                audioStreams++;
+                        }
+                        if (!videoStream || videoStreams !== 1 || audioStreams !== 1)
+                            return reject("The video file must have exactly one video stream and less than two audio streams");
+
+                        resolve();
+                    });
+                });
+            } catch (err) {
+                await respond(interaction, {
+                    content: `An error occurred while checking the video file\n\`\`\`\n${err}\n\`\`\``,
+                    ephemeral: true
+                });
+                await unlink(videoPath);
+                return;
+            }
+        }
+
+        // Confirmation that the person's information is correct, and the image aspect ratio is correct
+        const update = await confirm(interaction, `Title: ${title}\nDescription: ${description || "N/A"}\nTags: ${tags.length > 0 ? tags.join(", ") : "N/A"}\n\nNote that if your video has a vertical (tall)/square aspect ratio, it may end up being uploaded as a short instead.\nIf you don't want, then ensure your video is wide\n\nIs all of your information correct?`);
+        if (!update)
+            return;
+
+        const ownWork = await confirm(interaction, "This is for content that you made yourself, and doesn't contain content that would nuke the channels\nIs this your own work?");
+        if (!ownWork)
+            return;
+
+        await mkdir(".tmp", { recursive: true });
+
+        // Const to delete the temporary video file
+        const deleteVideo = () => unlink(videoPath).catch((error) => console.error("Failed to delete temporary files", error));
+        
+        try {
+            // Upload the video to YouTube
+            const ytData = await youtubeClient.upload(title, `${description}\n\nTags: ${tags.length > 0 ? tags.join(", ") : "N/A"}`, tags, videoPath);
+            if (ytData.status?.uploadStatus !== "uploaded") {
+                await respond(interaction, {
+                    content: `An error occurred while uploading the video\n\`\`\`\n${JSON.stringify(ytData, null, 2)}\n\`\`\``,
+                    ephemeral: true
+                });
+                return;
+            }
+            const youtubeUrl = `https://www.youtube.com/watch?v=${ytData.id}`;
+
+            // Send to the config.discord.feed channel too
+            discordClient.channels.fetch(config.discord.feed)
+            .then(async channel => {
+                if (channel?.isSendable())
+                    await channel.send({ content: `Uploaded by <@${interaction.user.id}>\nTitle: ${title}\nYouTube: ${youtubeUrl}` });
+                else
+                    console.error("Failed to send message to feed channel: Channel is not sendable");
+            })
+            .catch(err => console.error("Failed to send message to feed channel", err));
+
+            const motionData = {
+                title,
+                youtubeUrl,
+                memberDiscord: interaction.user.id,
+                date: new Date(),
+                tags,
+            }
+
+            await fetchHMAC<Motion[]>(siteUrl("/api/motions"), "POST", motionData)
+                .then(async (motions) => {
+                    const motion = motions[0];
+                    if (!motion)
+                        throw new Error("Failed to create motion");
+                    await respond(interaction, { content: `Uploaded to YouTube: ${youtubeUrl}` });
+                })
+                .catch(async (err) => await respond(interaction, { content: `An error occurred while uploading the song\n\`\`\`\n${err}\n\`\`\``, ephemeral: true }));
+        } catch (err) {
+            await respond(interaction, {
+                content: `An error occurred while creating the video\n\`\`\`\n${err}\n\`\`\``,
+                ephemeral: true
+            });
+        }
+        await deleteVideo();
+        return;
+    },
+}
+
+export default command;
