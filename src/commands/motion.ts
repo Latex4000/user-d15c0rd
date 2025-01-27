@@ -175,9 +175,8 @@ const command: Command = {
                 tags,
             }
 
-            await fetchHMAC<Motion[]>(siteUrl("/api/motions"), "POST", motionData)
-                .then(async (motions) => {
-                    const motion = motions[0];
+            await fetchHMAC<Motion>(siteUrl("/api/motions"), "POST", motionData)
+                .then(async (motion) => {
                     if (!motion)
                         throw new Error("Failed to create motion");
                     await respond(interaction, { content: `Uploaded to YouTube: ${youtubeUrl}` });
