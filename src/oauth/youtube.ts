@@ -79,7 +79,7 @@ class YoutubeClient {
         }
     }
 
-    async upload(title: string, description: string, tags: string[], videoPath: string): Promise<youtube_v3.Schema$Video> {
+    async upload(title: string, description: string, tags: string[], videoPath: string, imagePath?: string): Promise<youtube_v3.Schema$Video> {
         if (this.auth == null || this.youtube == null || !this.hasAccessToken)
             throw new Error("YouTube client not initialized");
 
@@ -101,7 +101,22 @@ class YoutubeClient {
                 body: createReadStream(videoPath),
             },
         });
-        return res.data;
+        const video = res.data;
+        const videoID = video.id;
+
+        if (videoID == null)
+            throw new Error("Failed to upload video");
+
+        if (imagePath)
+            await this.youtube.thumbnails.set({
+                auth: this.auth,
+                videoId: videoID,
+                media: {
+                    body: createReadStream(imagePath),
+                },
+            })
+
+        return video;
     }
 }
 

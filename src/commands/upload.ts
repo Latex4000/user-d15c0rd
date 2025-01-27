@@ -20,14 +20,15 @@ async function uploadToYoutubeAndSoundcloud(
     videoPath: string,
     title: string,
     description: string,
-    tags: string[]
+    tags: string[],
+    uploadThumbnail: boolean
 ) {
     let soundcloudUrl = "https://example.com/";
     let youtubeUrl = "https://example.com/";
 
     // Upload to YouTube
     if (canUseYoutube) {
-        const ytData = await youtubeClient.upload(title, `${description}\n\nTags: ${tags.length > 0 ? tags.join(", ") : "N/A"}`, tags, videoPath);
+        const ytData = await youtubeClient.upload(title, `${description}\n\nTags: ${tags.length > 0 ? tags.join(", ") : "N/A"}`, tags, videoPath, uploadThumbnail ? imagePath : undefined);
         if (ytData.status?.uploadStatus !== "uploaded") {
             await respond(interaction, {
                 content: `An error occurred while uploading the video\n\`\`\`\n${JSON.stringify(ytData, null, 2)}\n\`\`\``,
@@ -272,7 +273,7 @@ const command: Command = {
             // Upload the video to YouTube
             let urls: { youtubeUrl: string, soundcloudUrl: string } | undefined = undefined;
             try {
-                urls = await uploadToYoutubeAndSoundcloud(interaction, audioPath, imagePath, videoPath, title, description, tags);
+                urls = await uploadToYoutubeAndSoundcloud(interaction, audioPath, imagePath, videoPath, title, description, tags, video ? true : false);
             } catch (err) {
                 await respond(interaction, {
                     content: `An error occurred while uploading the video\n\`\`\`\n${err}\n\`\`\``,
