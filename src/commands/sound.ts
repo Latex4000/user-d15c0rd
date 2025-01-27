@@ -29,7 +29,7 @@ async function uploadToYoutubeAndSoundcloud(
 
     // Upload to YouTube
     if (canUseYoutube) {
-        const ytData = await youtubeClient.upload(title, `${description}\n\nTags: ${tags.length > 0 ? tags.join(", ") : "N/A"}`, tags, videoPath, uploadThumbnail ? imagePath : undefined);
+        const ytData = await youtubeClient.upload(title, `${description}\n\nTags: ${tags.length > 0 ? tags.join(", ") : "N/A"}`, tags, videoPath, "sounds", uploadThumbnail ? imagePath : undefined);
         if (ytData.status?.uploadStatus !== "uploaded") {
             await respond(interaction, {
                 content: `An error occurred while uploading the video\n\`\`\`\n${JSON.stringify(ytData, null, 2)}\n\`\`\``,
