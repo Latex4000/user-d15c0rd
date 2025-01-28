@@ -143,9 +143,8 @@ const command: Command = {
                 await respond(interaction, { content: "The video file must be an mp4 file", ephemeral: true });
                 return;
             }
-            await fetch(video.url).then(res => res.blob()).then(async blob => {
-                await writeFile(videoPath, Buffer.from(await blob.arrayBuffer()));
-            });
+            await fetch(video.url)
+                .then(async response => writeFile(videoPath, Buffer.from(await response.arrayBuffer())));
 
             // Run ffprobe to check the video file
             try {
@@ -203,12 +202,10 @@ const command: Command = {
         // Download files and save them with a hashed name
         const audioPath = `./.tmp/${createHash("sha256").update(audio.url).digest("hex")}${audio.name.endsWith(".mp3") ? ".mp3" : ".wav"}`;
         const imagePath = `./.tmp/${createHash("sha256").update(image.url).digest("hex")}${image.name.endsWith(".png") ? ".png" : ".jpg"}`;
-        await fetch(audio.url).then(res => res.blob()).then(async blob => {
-            await writeFile(audioPath, Buffer.from(await blob.arrayBuffer()));
-        });
-        await fetch(image.url).then(res => res.blob()).then(async blob => {
-            await writeFile(imagePath, Buffer.from(await blob.arrayBuffer()));
-        });
+        await fetch(audio.url)
+            .then(async response => writeFile(audioPath, Buffer.from(await response.arrayBuffer())));
+        await fetch(image.url)
+            .then(async response => writeFile(imagePath, Buffer.from(await response.arrayBuffer())));
 
         // Const to delete the temporary video file and the downloaded files
         const deleteTemporaryFiles = () => Promise.allSettled([

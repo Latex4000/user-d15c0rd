@@ -85,9 +85,8 @@ const command: Command = {
                 await respond(interaction, { content: "The video file must be an mp4 file", ephemeral: true });
                 return;
             }
-            await fetch(video.url).then(res => res.blob()).then(async blob => {
-                await writeFile(videoPath, Buffer.from(await blob.arrayBuffer()));
-            });
+            await fetch(video.url)
+                .then(async response => writeFile(videoPath, Buffer.from(await response.arrayBuffer())));
 
             // Run ffprobe to check the video file
             try {
@@ -103,7 +102,7 @@ const command: Command = {
                         let audioStreams = 0;
                         for (const line of lines) {
                             if (line.startsWith("codec_name="))
-                                if (!["h264", "aac"].includes(line.split("=")[1])) 
+                                if (!["h264", "aac"].includes(line.split("=")[1]))
                                     return reject("The video file must be h264 video and aac audio");
 
                             if (line.startsWith("codec_type=video")) {
@@ -136,15 +135,14 @@ const command: Command = {
         const ownWork = await confirm(interaction, "This is for content that you made yourself, and doesn't contain content that would nuke the channels\nIs this your own work?");
         if (!ownWork)
             return;
-        
+
         let imagePath: string | undefined = undefined;
         if (thumbnail) {
             imagePath = `./.tmp/${createHash("sha256").update(thumbnail.url).digest("hex")}${thumbnail.name.endsWith(".png") ? ".png" : ".jpg"}`;
-            await fetch(thumbnail.url).then(res => res.blob()).then(async blob => {
-                await writeFile(imagePath!, Buffer.from(await blob.arrayBuffer()));
-            });
+            await fetch(thumbnail.url)
+                .then(async response => writeFile(imagePath!, Buffer.from(await response.arrayBuffer())));
         }
-        
+
         try {
             // Upload the video to YouTube
             const ytData = await youtubeClient.upload(title, `${description}\n\nTags: ${tags.length > 0 ? tags.join(", ") : "N/A"}`, tags, videoPath, "motions", imagePath);
@@ -159,13 +157,13 @@ const command: Command = {
 
             // Send to the config.discord.feed channel too
             discordClient.channels.fetch(config.discord.feed)
-            .then(async channel => {
-                if (channel?.isSendable())
-                    await channel.send({ content: `Uploaded by <@${interaction.user.id}>\nTitle: ${title}\nYouTube: ${youtubeUrl}` });
-                else
-                    console.error("Failed to send message to feed channel: Channel is not sendable");
-            })
-            .catch(err => console.error("Failed to send message to feed channel", err));
+                .then(async channel => {
+                    if (channel?.isSendable())
+                        await channel.send({ content: `Uploaded by <@${interaction.user.id}>\nTitle: ${title}\nYouTube: ${youtubeUrl}` });
+                    else
+                        console.error("Failed to send message to feed channel: Channel is not sendable");
+                })
+                .catch(err => console.error("Failed to send message to feed channel", err));
 
             const motionData = {
                 title,
