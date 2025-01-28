@@ -1,5 +1,5 @@
 import { readFile, writeFile } from "node:fs/promises";
-import { createReadStream } from "node:fs";
+import { createReadStream, openAsBlob } from "node:fs";
 import config from "../config.js";
 
 interface SoundcloudToken {
@@ -47,8 +47,8 @@ export async function uploadSoundcloud(title: string, description: string, tags:
     formData.set("track[sharing]", "public");
     formData.set("track[description]", description);
     formData.set("track[tags]", tags.join(" "));
-    formData.set("track[asset_data]", new Blob([await readFile(audioPath)]));
-    formData.set("track[artwork_data]", new Blob([await readFile(imagePath)]));
+    formData.set("track[asset_data]", await openAsBlob(audioPath));
+    formData.set("track[artwork_data]", await openAsBlob(imagePath));
 
     const res: { permalink_url: string } = await fetch("https://api.soundcloud.com/tracks", {
         method: "POST",
