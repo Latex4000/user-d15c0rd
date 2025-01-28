@@ -7,7 +7,6 @@ import { exec } from "node:child_process";
 import { createHash, randomUUID } from "node:crypto";
 import { fetchHMAC } from "../fetch.js";
 import youtubeClient from "../oauth/youtube.js";
-import { openAsBlob } from "node:fs";
 import { extname } from "node:path";
 import config, { canUseSoundcloud, canUseYoutube, siteUrl } from "../config.js";
 import confirm from "../confirm.js";
@@ -247,8 +246,8 @@ const command: Command = {
             formData.set("title", title);
             formData.set("soundcloudUrl", urls.soundcloudUrl);
             formData.set("youtubeUrl", urls.youtubeUrl);
-            formData.set("track", await openAsBlob(audioPath), audioPath);
-            formData.set("cover", await openAsBlob(imagePath), imagePath);
+            formData.set("track", audio.url);
+            formData.set("cover", image.url);
             if (tagsString)
                 formData.set("tags", tagsString);
 
