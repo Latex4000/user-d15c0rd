@@ -247,8 +247,8 @@ const command: Command = {
             formData.set("title", title);
             formData.set("soundcloudUrl", urls.soundcloudUrl);
             formData.set("youtubeUrl", urls.youtubeUrl);
-            formData.set("track", await openAsBlob(audioPath), `track${extname(audioPath)}`);
-            formData.set("cover", await openAsBlob(imagePath), `cover${extname(imagePath)}`);
+            formData.set("track", await openAsBlob(audioPath), audioPath);
+            formData.set("cover", await openAsBlob(imagePath), imagePath);
             if (tagsString)
                 formData.set("tags", tagsString);
 
