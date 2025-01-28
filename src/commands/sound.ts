@@ -162,7 +162,7 @@ const command: Command = {
                         let audioStreams = 0;
                         for (const line of lines) {
                             if (line.startsWith("codec_name="))
-                                if (!["h264", "aac"].includes(line.split("=")[1])) 
+                                if (!["h264", "aac"].includes(line.split("=")[1]))
                                     return reject("The video file must be h264 video and aac audio");
 
                             if (line.startsWith("codec_type=video")) {
@@ -216,7 +216,7 @@ const command: Command = {
             unlink(audioPath),
             unlink(imagePath),
         ]).catch((error) => console.error("Failed to delete temporary files", error));
-        
+
         try {
             if (canUseYoutube && !video) {
                 // Run ffmpeg to create a video file
@@ -247,13 +247,13 @@ const command: Command = {
             }
 
             const formData = new FormData();
-            formData.append("title", title);
-            formData.append("soundcloudUrl", urls.soundcloudUrl);
-            formData.append("youtubeUrl", urls.youtubeUrl);
-            formData.append("track", await openAsBlob(audioPath), `track${extname(audioPath)}`);
-            formData.append("cover", await openAsBlob(imagePath), `cover${extname(imagePath)}`);
+            formData.set("title", title);
+            formData.set("soundcloudUrl", urls.soundcloudUrl);
+            formData.set("youtubeUrl", urls.youtubeUrl);
+            formData.set("track", await openAsBlob(audioPath), `track${extname(audioPath)}`);
+            formData.set("cover", await openAsBlob(imagePath), `cover${extname(imagePath)}`);
             if (tagsString)
-                formData.append("tags", tagsString);
+                formData.set("tags", tagsString);
 
             await fetchHMAC(siteUrl("/api/sounds"), "POST", formData)
                 .then(async () => await respond(interaction, { content: `Uploaded to YouTube: ${urls.youtubeUrl}\nUploaded to SoundCloud: ${urls.soundcloudUrl}` }))

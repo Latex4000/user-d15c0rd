@@ -84,11 +84,11 @@ const command: Command = {
             return;
 
         const formData = new FormData();
-        formData.append("discord", interaction.user.id);
-        formData.append("title", title);
-        formData.append("md", content);
+        formData.set("discord", interaction.user.id);
+        formData.set("title", title);
+        formData.set("md", content);
         if (tags) {
-            formData.append("tags", tags);
+            formData.set("tags", tags);
         }
 
         // Extract zip and append every single file data into "assets" form data key
@@ -107,7 +107,7 @@ const command: Command = {
                         if (file.length > fileSizeLimit)
                             throw new Error(`File ${entry.entryName} exceeds the size limit of 1 MB`);
 
-                        formData.append("assets", new Blob([file]), entry.entryName);
+                        formData.set("assets", new Blob([file]), entry.entryName);
                     }
                 })
                 .catch(async e => {

@@ -43,12 +43,12 @@ async function getSoundcloudAccessToken() {
 
 export async function uploadSoundcloud(title: string, description: string, tags: string[], audioPath: string, imagePath: string) {
     const formData = new FormData();
-    formData.append("track[title]", title);
-    formData.append("track[sharing]", "public");
-    formData.append("track[description]", description);
-    formData.append("track[tags]", tags.join(" "));
-    formData.append("track[asset_data]", new Blob([await readFile(audioPath)]));
-    formData.append("track[artwork_data]", new Blob([await readFile(imagePath)]));
+    formData.set("track[title]", title);
+    formData.set("track[sharing]", "public");
+    formData.set("track[description]", description);
+    formData.set("track[tags]", tags.join(" "));
+    formData.set("track[asset_data]", new Blob([await readFile(audioPath)]));
+    formData.set("track[artwork_data]", new Blob([await readFile(imagePath)]));
 
     const res: { permalink_url: string } = await fetch("https://api.soundcloud.com/tracks", {
         method: "POST",
