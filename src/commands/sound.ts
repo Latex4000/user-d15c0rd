@@ -243,6 +243,7 @@ const command: Command = {
             }
 
             const formData = new FormData();
+            formData.set("discord", interaction.user.id);
             formData.set("title", title);
             formData.set("soundcloudUrl", urls.soundcloudUrl);
             formData.set("youtubeUrl", urls.youtubeUrl);
