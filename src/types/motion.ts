@@ -1,7 +1,7 @@
 import { Member } from "./member.js";
+import { Thing } from "./thing.js";
 
-export interface Motion {
-    title: string;
+export interface Motion extends Thing {
     youtubeUrl: string;
     memberDiscord: Member["discord"];
     date: Date;
