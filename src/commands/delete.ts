@@ -6,6 +6,7 @@ import { ThingType } from "../types/thing.js";
 import choose from "../choose.js";
 import { changeStatusSoundcloud } from "../oauth/soundcloud.js";
 import youtubeClient from "../oauth/youtube.js";
+import confirm from "../confirm.js";
 
 const command: Command = {
     data: new SlashCommandBuilder()
@@ -41,6 +42,10 @@ const command: Command = {
         if (!thing)
             return;
 
+        const confirmation = await confirm(interaction, `Are you sure you want to delete the ${thingType} \`${thing.title}\`?`);
+        if (!confirmation)
+            return;
+
         try {
             await fetchHMAC(siteUrl(`/api/${thingType}?discord=${interaction.user.id}&id=${thing.id}`), "DELETE");
         } catch (e) {
@@ -54,7 +59,7 @@ const command: Command = {
                 break;
             case "sounds":
                 if (!("soundcloudUrl" in thing) || !("youtubeUrl" in thing) || typeof thing.soundcloudUrl !== "string" || typeof thing.youtubeUrl !== "string") {
-                    await interaction.followUp({ content: `The ${thingType} #${thing.id} has been removed, but it was not found on SoundCloud/YouTube. If wanted, you can restore it with \/restore` });
+                    await interaction.followUp({ content: `The ${thingType} \`${thing.title}\` has been removed, but it was not found on SoundCloud/YouTube. If wanted, you can restore it with \/restore` });
                     return;
                 }
                 await changeStatusSoundcloud(thing.soundcloudUrl, "private");
@@ -62,14 +67,14 @@ const command: Command = {
                 break;
             case "motions":
                 if (!("youtubeUrl" in thing) || typeof thing.youtubeUrl !== "string") {
-                    await interaction.followUp({ content: `The ${thingType} #${thing.id} has been removed, but it was not found on YouTube. If wanted, you can restore it with \/restore` });
+                    await interaction.followUp({ content: `The ${thingType} \`${thing.title}\` has been removed, but it was not found on YouTube. If wanted, you can restore it with \/restore` });
                     return;
                 }
                 await youtubeClient.statusChange(thing.youtubeUrl, "private");
                 break;
         }
 
-        await interaction.followUp({ content: `The ${thingType} #${thing.id} has been removed. If wanted, you can restore it with \/restore` });
+        await interaction.followUp({ content: `The ${thingType} \`${thing.title}\` has been removed. If wanted, you can restore it with \/restore` });
     },
 }
 
