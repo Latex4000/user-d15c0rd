@@ -50,13 +50,28 @@ export async function uploadSoundcloud(title: string, description: string, tags:
     formData.set("track[asset_data]", await openAsBlob(audioPath));
     formData.set("track[artwork_data]", await openAsBlob(imagePath));
 
-    const res: { permalink_url: string } = await fetch("https://api.soundcloud.com/tracks", {
+    const res: { id: number; permalink_url: string } = await fetch("https://api.soundcloud.com/tracks", {
         method: "POST",
         headers: {
             "Authorization": `OAuth ${await getSoundcloudAccessToken()}`,
         },
         body: formData,
-    }).then(res => res.json() as Promise<{ permalink_url: string }>);
+    }).then(res => res.json() as Promise<{ id: number; permalink_url: string }>);
 
-    return res.permalink_url;
+    return `${res.permalink_url}?id=${res.id}`;
+}
+
+export async function changeStatusSoundcloud(url: string, sharing: "public" | "private") {
+    const id = new URL(url).searchParams.get("id");
+    if (!id)
+        throw new Error("Invalid Soundcloud URL");
+
+    await fetch(`https://api.soundcloud.com/tracks/${id}`, {
+        method: "PUT",
+        headers: {
+            "Authorization": `OAuth ${await getSoundcloudAccessToken()}`,
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ track: { sharing } })
+    });
 }
