@@ -17,7 +17,7 @@ const command: Command = {
         .addStringOption(option =>
             option
                 .setName("site")
-                .setDescription("The URL of your site with https:// (empty")
+                .setDescription("The URL of your site (include https://)")
                 .setRequired(false)
         )
         .addStringOption(option =>
