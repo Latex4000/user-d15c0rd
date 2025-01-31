@@ -28,20 +28,38 @@ async function uploadToYoutubeAndSoundcloud(
 
     // Upload to YouTube
     if (canUseYoutube) {
-        const ytData = await youtubeClient.upload(title, `${description}\n\nTags: ${tags.length > 0 ? tags.join(", ") : "N/A"}`, tags, videoPath, "sounds", uploadThumbnail ? imagePath : undefined);
-        if (ytData.status?.uploadStatus !== "uploaded") {
+        try {
+            const ytData = await youtubeClient.upload(title, `${description}\n\nTags: ${tags.length > 0 ? tags.join(", ") : "N/A"}`, tags, videoPath, "sounds", uploadThumbnail ? imagePath : undefined);
+            if (ytData.status?.uploadStatus !== "uploaded") {
+                await respond(interaction, {
+                    content: `An error occurred while uploading the video\n\`\`\`\n${JSON.stringify(ytData, null, 2)}\n\`\`\``,
+                    ephemeral: true
+                });
+                return;
+            }
+            youtubeUrl = `https://www.youtube.com/watch?v=${ytData.id}`;
+        } catch (err) {
+            console.error(err);
             await respond(interaction, {
-                content: `An error occurred while uploading the video\n\`\`\`\n${JSON.stringify(ytData, null, 2)}\n\`\`\``,
+                content: `An error occurred while uploading to youtube \n\`\`\`\n${err}\n\`\`\``,
                 ephemeral: true
             });
             return;
         }
-        youtubeUrl = `https://www.youtube.com/watch?v=${ytData.id}`;
     }
 
     // Upload to SoundCloud
     if (canUseSoundcloud) {
-        soundcloudUrl = await uploadSoundcloud(title, `${description}\n\nTags: ${tags ? tags.join(", ") : "N/A"}`, tags || [], audioPath, imagePath);
+        try {
+            soundcloudUrl = await uploadSoundcloud(title, `${description}\n\nTags: ${tags ? tags.join(", ") : "N/A"}`, tags || [], audioPath, imagePath);
+        } catch (err) {
+            console.error(err);
+            await respond(interaction, {
+                content: `An error occurred while uploading to soundcloud\n\`\`\`\n${err}\n\`\`\``,
+                ephemeral: true
+            });
+            return;
+        }
     }
 
     // Send to the config.discord.feed channel too
@@ -256,6 +274,7 @@ const command: Command = {
                 .then(async () => await respond(interaction, { content: `Uploaded to YouTube: ${urls.youtubeUrl}\nUploaded to SoundCloud: ${urls.soundcloudUrl}` }))
                 .catch(async (err) => await respond(interaction, { content: `An error occurred while uploading the song\n\`\`\`\n${err}\n\`\`\``, ephemeral: true }));
         } catch (err) {
+            console.error(err);
             await respond(interaction, {
                 content: `An error occurred while creating the video\n\`\`\`\n${err}\n\`\`\``,
                 ephemeral: true
