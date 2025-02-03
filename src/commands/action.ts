@@ -31,6 +31,13 @@ const command: Command = {
         const title = interaction.options.getString("title");
         const description = interaction.options.getString("description");
 
+        try {
+            new URL(rss);
+        } catch {
+            await interaction.editReply("Invalid RSS/Atom feed URL provided");
+            return;
+        }
+
         // Check if rss is valid rss/atom feed
         const parser = new Parser();
         let feed: {[key: string]: any} & Parser.Output<{[key: string]: any}> | undefined = undefined;
