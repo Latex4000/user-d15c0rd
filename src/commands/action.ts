@@ -33,34 +33,49 @@ const command: Command = {
 
         // Check if rss is valid rss/atom feed
         const parser = new Parser();
-        let feed: {[key: string]: any} & Parser.Output<{[key: string]: any}>
+        let feed: {[key: string]: any} & Parser.Output<{[key: string]: any}> | undefined = undefined;
         try {
             feed = await parser.parseURL(rss);
             if (!feed.link || !feed.items)
                 throw new Error("Invalid RSS/Atom feed (missing link or items)");
-            if (feed.items.length && (!feed.items[0].title || !feed.items[0].link))
+            if (feed.items.length && !feed.items[0].link)
                 throw new Error("Invalid RSS/Atom feed items (missing title or link)");
-            if (!feed.title && !title) {
-                await interaction.editReply("RSS/Atom feed does not have a title, please provide a custom one");
-                return
-            }
-            if (!feed.description && !description) {
-                await interaction.editReply("RSS/Atom feed does not have a description, please provide a custom one");
-                return
-            }
+            if ((!feed.title && !title) || (!feed.description && !description))
+                throw new Error(`RSS/Atom feed does not have a ${!feed.title && !title ? "title" : ""}${!feed.title && !title && !feed.description && !description ? " or " : ""}${!feed.description && !description ? "description" : ""}, please provide custom ${!feed.title && !title ? "title" : ""}${!feed.title && !title && !feed.description && !description ? " and " : ""}${!feed.description && !description ? "description" : ""}`);
         } catch (error) {
-            await interaction.editReply("Invalid RSS/Atom feed");
+            if (error instanceof Error)
+                await interaction.editReply(error.message);
+            else {
+                console.error(error);
+                await interaction.editReply("Invalid RSS/Atom feed");
+            }
+
+            if (feed && interaction.channel?.isSendable()) {
+                await interaction.channel.send({
+                    content: "Feed data parsed below for reference:",
+                    files: [{
+                        attachment: Buffer.from(JSON.stringify(feed, null, 2)),
+                        name: "feed.json"
+                    }]
+                })
+            }
             return;
         }
 
+
         await fetchHMAC(siteUrl("/api/actions"), "POST", {
-            rss,
+            url: rss,
             memberDiscord: interaction.user.id,
             title: title || feed.title,
             description: description || feed.description,
-        });
+        })
+            .then(async res => {
+                if (!res)
+                    throw new Error("Failed to add action");
+                await interaction.editReply(`Added\nshuold be visible on the site at ${siteUrl("/actions")}`);
+            })
+            .catch(async (err) => await interaction.editReply(`An error occurred while adding action\n\`\`\`\n${err}\n\`\`\``));
 
-        await interaction.editReply(`Added\nshuold be visible on the site at ${siteUrl("/actions")}`);
     },
 }
 
