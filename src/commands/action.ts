@@ -72,6 +72,7 @@ const command: Command = {
 
         await fetchHMAC(siteUrl("/api/actions"), "POST", {
             url: rss,
+            siteUrl: feed.link,
             memberDiscord: interaction.user.id,
             title: title || feed.title,
             description: description || feed.description,
