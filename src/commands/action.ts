@@ -43,6 +43,7 @@ const command: Command = {
         let feed: {[key: string]: any} & Parser.Output<{[key: string]: any}> | undefined = undefined;
         try {
             feed = await parser.parseURL(rss);
+            console.log(feed);
             if (!feed.link || !feed.items)
                 throw new Error("Invalid RSS/Atom feed (missing link or items)");
             if (feed.items.length && !feed.items[0].link)
@@ -51,11 +52,9 @@ const command: Command = {
                 throw new Error(`RSS/Atom feed does not have a ${!feed.title && !title ? "title" : ""}${!feed.title && !title && !feed.description && !description ? " or " : ""}${!feed.description && !description ? "description" : ""}, please provide custom ${!feed.title && !title ? "title" : ""}${!feed.title && !title && !feed.description && !description ? " and " : ""}${!feed.description && !description ? "description" : ""}`);
         } catch (error) {
             if (error instanceof Error)
-                await interaction.editReply(error.message);
-            else {
-                console.error(error);
+                await interaction.editReply(`Could not reach/parse RSS/Atom feed\n\`\`\`\n${error}\n\`\`\`${error.message.includes("403") ? "\nThe website the feed is from may be blocking the bot" : ""}`);
+            else
                 await interaction.editReply("Invalid RSS/Atom feed");
-            }
 
             if (feed && interaction.channel?.isSendable()) {
                 await interaction.channel.send({
