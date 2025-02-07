@@ -43,7 +43,6 @@ const command: Command = {
         let feed: {[key: string]: any} & Parser.Output<{[key: string]: any}> | undefined = undefined;
         try {
             feed = await parser.parseURL(rss);
-            console.log(feed);
             if (!feed.link || !feed.items)
                 throw new Error("Invalid RSS/Atom feed (missing link or items)");
             if (feed.items.length && !feed.items[0].link)
