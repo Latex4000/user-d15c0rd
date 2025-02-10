@@ -62,7 +62,7 @@ const command: Command = {
                     return;
                 }
 
-                await interaction.followUp({ content: `You have confirmed your webring membership`, embeds: [memberInfo(memberRes)], ephemeral: true });
+                await interaction.followUp({ content: `You have confirmed your webring membership and added the redirect from \`${memberAliasToHostName(memberRes.alias)}.nonacademic.net\` to ${member.site!}\nallow ~30 minutes for the redirect to be accepted by the internet`, embeds: [memberInfo(memberRes)], ephemeral: true });
             })
             .catch(async (err) => await interaction.followUp({ content: "An error occurred while confirming your webring membership\n\`\`\`\n" + err + "\n\`\`\`", ephemeral: true }));
     },

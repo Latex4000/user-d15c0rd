@@ -61,7 +61,7 @@ const command: Command = {
             return;
         }
         
-        await interaction.editReply(`bsky should be added as \`${subdomain}.nonacademic.net\`\nPlease allow up to 24 hours for the DNS to propagate`);
+        await interaction.editReply(`bsky should be added as \`${subdomain}.nonacademic.net\`\nIt can take 0 seconds to 24 hours for the DNS to update fully`);
     },
 }
 
