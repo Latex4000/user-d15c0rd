@@ -6,7 +6,8 @@
   "scripts": {
     "build": "rm -rf build && tsc --outDir build",
     "start": "node build/src/index.js",
-    "dev": "NODE_ENV=development tsx --watch src/index.ts"
+    "dev": "NODE_ENV=development tsx --watch src/index.ts",
+    "delete": "NODE_ENV=development tsx src/delete.ts"
   },
   "author": "",
   "license": "MIT",
