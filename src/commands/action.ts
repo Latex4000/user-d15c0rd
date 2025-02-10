@@ -51,7 +51,7 @@ const command: Command = {
                 return;
             }
 
-            const noRSSConfirm = await confirm(interaction, `The link provided is not an RSS/Atom feed. Are you sure you want to continue?\nThis means new posts/content will not be shown in the feed on the [actions](${siteUrl("/actions")}) page, and the link will only show on the left sidebar`);
+            const noRSSConfirm = await confirm(interaction, `The link provided is not an RSS/Atom feed. Are you sure you want to continue?\nThis means new posts/content will not be shown in the feed on the [actions](${siteUrl("/actions")}) page, and the link will only show on the left sidebar\n\n# Most sites have RSS/atom feeds...\n## if you're unsure, check the site for a link to an RSS/atom feed before continuing\n## or potentially use a service like [fetchrss.com](https://fetchrss.com/) or [rsshub.app](https://rsshub.app/) to create a feed`);
             if (!noRSSConfirm)
                 return;
         } else {
