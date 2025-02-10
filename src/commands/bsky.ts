@@ -3,7 +3,7 @@ import { Command } from "./index.js";
 import { Member } from "../types/member.js";
 import { fetchHMAC } from "../fetch.js";
 import { siteUrl } from "../config.js";
-import { getHosts, addAtprotoRecord, setHosts } from "../namecheap.js";
+import { getHosts, addAtprotoRecord, setHosts, memberAliasToHostName } from "../namecheap.js";
 import confirm from "../confirm.js";
 
 const command: Command = {
@@ -34,11 +34,7 @@ const command: Command = {
             return;
         }
 
-        const subdomain = member.alias
-            .toLowerCase()
-            .replace(/[^a-z0-9-_]/g, "")
-            .replace(/^-+|-+$/g, "")
-            .slice(0, 63);
+        const subdomain = memberAliasToHostName(member.alias);
         if (!subdomain) {
             await interaction.followUp({ content: "You do not have a valid alias. Please change your alias to something more suitable with `/change`", ephemeral: true });
             return;

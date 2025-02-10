@@ -3,7 +3,7 @@ import { Command } from "./index.js";
 import { Member, memberInfo } from "../types/member.js";
 import { fetchHMAC } from "../fetch.js";
 import { siteUrl } from "../config.js";
-import { addRedirectRecord, getHosts, setHosts } from "../namecheap.js";
+import { addRedirectRecord, getHosts, memberAliasToHostName, setHosts } from "../namecheap.js";
 
 const command: Command = {
     data: new SlashCommandBuilder()
@@ -103,16 +103,8 @@ const command: Command = {
                 try {
                     let hosts = await getHosts();
 
-                    const oldAliasHostName = oldAlias
-                        .toLowerCase()
-                        .replace(/[^a-z0-9-_]/g, "")
-                        .replace(/^-+|-+$/g, "")
-                        .slice(0, 63);
-                    const newAliasHostName = member.alias
-                        .toLowerCase()
-                        .replace(/[^a-z0-9-_]/g, "")
-                        .replace(/^-+|-+$/g, "")
-                        .slice(0, 63);
+                    const oldAliasHostName = memberAliasToHostName(oldAlias);
+                    const newAliasHostName = memberAliasToHostName(memberRes.alias);
                     if (!newAliasHostName) {
                         await interaction.followUp({ content: `You have updated your webring membership, but your alias is invalid for DNS records (bsky, site redirect)`, embeds: [memberInfo(memberRes)], ephemeral: true });
                         return;

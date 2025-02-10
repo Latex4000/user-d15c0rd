@@ -8,6 +8,12 @@ interface HostRecord {
     TTL?: number;
 }
 
+export const memberAliasToHostName = (alias: string) => alias
+    .toLowerCase()
+    .replace(/[^a-z0-9-_]/g, "")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 63);
+
 export async function getHosts(): Promise<HostRecord[]> {
     const url = new URL("https://api.namecheap.com/xml.response");
     url.searchParams.append("ApiUser", config.namecheap.username);

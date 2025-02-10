@@ -1,6 +1,7 @@
 import { ColorResolvable, EmbedBuilder } from "discord.js";
 import htmlGenerator from "../htmlGenerator.js";
 import { siteUrl } from "../config.js";
+import { memberAliasToHostName } from "../namecheap.js";
 
 export interface Member {
     discord: string;
@@ -11,11 +12,7 @@ export interface Member {
 }
 
 export function memberInfo(member: Member) {
-    const memberAliasHostName = member.alias
-        .toLowerCase()
-        .replace(/[^a-z0-9-_]/g, "")
-        .replace(/^-+|-+$/g, "")
-        .slice(0, 63);
+    const memberAliasHostName = memberAliasToHostName(member.alias);
     const embed = new EmbedBuilder()
         .setTitle('Member Information')
         .addFields(
