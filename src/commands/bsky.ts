@@ -57,7 +57,6 @@ const command: Command = {
 
         try {
             const hosts = await getHosts();
-            console.log(hosts);
             addAtprotoRecord(hosts, subdomain, did);
             await setHosts(hosts);
         } catch (e) {

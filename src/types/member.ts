@@ -11,11 +11,16 @@ export interface Member {
 }
 
 export function memberInfo(member: Member) {
+    const memberAliasHostName = member.alias
+        .toLowerCase()
+        .replace(/[^a-z0-9-_]/g, "")
+        .replace(/^-+|-+$/g, "")
+        .slice(0, 63);
     const embed = new EmbedBuilder()
         .setTitle('Member Information')
         .addFields(
             { name: 'Alias', value: member.alias || 'N/A', inline: true },
-            { name: 'Site', value: member.site ? `<${member.site}>` : 'none', inline: true },
+            { name: 'Site', value: member.site ? `<${member.site}>${member.addedRingToSite ? `\n<http://${memberAliasHostName}.nonacademic.net>` : ''}` : 'N/A', inline: true },
             { name: `Color for Words (${siteUrl("words")})`, value: member.color || 'N/A' }
         )
         // Check if member.color is a #\d{6} hex code and set the color of the embed, if not check if it is \d{6} and add a # to the beginning, otherwise use the default embed color

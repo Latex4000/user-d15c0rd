@@ -34,17 +34,34 @@ export async function getHosts(): Promise<HostRecord[]> {
 
 export function addAtprotoRecord (existingHosts: HostRecord[], subdomain: string, did: string) {
     const recordName = `_atproto.${subdomain}`;
-    const i = existingHosts.findIndex(record => record.HostName === recordName);
-    if (i === -1) {
+    const recordType = "TXT";
+    const i = existingHosts.findIndex(record => record.HostName === recordName && record.RecordType === recordType);
+    if (i === -1)
         existingHosts.push({
             HostName: recordName,
-            RecordType: "TXT",
+            RecordType: recordType,
             Address: `did=${did}`,
             TTL: 1799,
         });
-    } else {
+    else
         existingHosts[i].Address = `did=${did}`;
-    }
+
+    return existingHosts;
+}
+
+export function addRedirectRecord (existingHosts: HostRecord[], username: string, site: string) {
+    const recordName = username;
+    const recordType = "URL";
+    const i = existingHosts.findIndex(record => record.HostName === recordName && record.RecordType === recordType);
+    if (i === -1)
+        existingHosts.push({
+            HostName: recordName,
+            RecordType: recordType,
+            Address: site,
+            TTL: 1799,
+        });
+    else
+        existingHosts[i].Address = site;
 
     return existingHosts;
 }
@@ -66,7 +83,6 @@ export async function setHosts(hostRecords: HostRecord[]) {
         if (record.TTL)
             params.append(`TTL${i + 1}`, record.TTL.toString());
     });
-    console.log(params, params.toString());
 
     const response = await fetch(url, {
         method: "POST",

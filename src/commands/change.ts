@@ -3,6 +3,7 @@ import { Command } from "./index.js";
 import { Member, memberInfo } from "../types/member.js";
 import { fetchHMAC } from "../fetch.js";
 import { siteUrl } from "../config.js";
+import { addRedirectRecord, getHosts, setHosts } from "../namecheap.js";
 
 const command: Command = {
     data: new SlashCommandBuilder()
@@ -49,6 +50,8 @@ const command: Command = {
         let site = interaction.options.getString("site");
         let color = interaction.options.getString("color");
 
+        const oldAlias = member.alias;
+
         // Check if the site URL is valid
         if (site)
             try {
@@ -88,10 +91,57 @@ const command: Command = {
         if (color) member.color = color;
         await fetchHMAC<Member[]>(siteUrl("/api/member"), "PUT", member)
             .then(async members => {
-                const member = members[0];
-                if (!member)
+                const memberRes = members[0];
+                if (!memberRes)
                     throw new Error("Member not found in response");
-                await interaction.followUp({ content: `You have updated your webring membership`, embeds: [memberInfo(member)], ephemeral: true })
+
+                if (!alias && !site) {
+                    await interaction.followUp({ content: `You have updated your webring membership`, embeds: [memberInfo(memberRes)], ephemeral: true });
+                    return;
+                }
+                
+                try {
+                    let hosts = await getHosts();
+
+                    const oldAliasHostName = oldAlias
+                        .toLowerCase()
+                        .replace(/[^a-z0-9-_]/g, "")
+                        .replace(/^-+|-+$/g, "")
+                        .slice(0, 63);
+                    const newAliasHostName = member.alias
+                        .toLowerCase()
+                        .replace(/[^a-z0-9-_]/g, "")
+                        .replace(/^-+|-+$/g, "")
+                        .slice(0, 63);
+                    if (!newAliasHostName) {
+                        await interaction.followUp({ content: `You have updated your webring membership, but your alias is invalid for DNS records (bsky, site redirect)`, embeds: [memberInfo(memberRes)], ephemeral: true });
+                        return;
+                    }
+
+                    // See if theres an atproto TXT record and if there's a redirect record
+                    const atprotoIndex = hosts.findIndex(record => record.HostName === `_atproto.${oldAliasHostName}` && record.RecordType === "TXT");
+                    const redirectIndex = hosts.findIndex(record => record.HostName === oldAliasHostName && record.RecordType === "URL");
+
+                    // If the alias has changed, update the TXT record
+                    if (atprotoIndex !== -1)
+                        hosts[atprotoIndex].HostName = `_atproto.${newAliasHostName}`;
+
+                    if (redirectIndex !== -1) {
+                        hosts[redirectIndex].HostName = newAliasHostName;
+                        hosts[redirectIndex].Address = member.site!;
+                    } else if (member.site && member.addedRingToSite)
+                        hosts = addRedirectRecord(hosts, newAliasHostName, member.site);
+
+                    console.log(atprotoIndex, redirectIndex, site && member.addedRingToSite, hosts);
+
+                    await setHosts(hosts);
+
+                    await interaction.followUp({ content: `You have updated your webring membership and your DNS records\n${atprotoIndex !== -1 ? `Updated ${oldAliasHostName}.nonacademic.net to ${newAliasHostName}.nonacademic.net for bsky\n` : ""}${redirectIndex !== -1 ? `Updated ${oldAliasHostName}.nonacademic.net to ${newAliasHostName}.nonacademic.net for your site redirect\n` : site && member.addedRingToSite ? `Added ${newAliasHostName}.nonacademic.net for your site redirect\n` : ""}`, embeds: [memberInfo(memberRes)], ephemeral: true });
+                } catch (e) {
+                    await interaction.editReply(`An error occurred while fetching the DNS data\n\`\`\`\n${e}\n\`\`\``);
+                    console.error(e);
+                    return;
+                }
             })
             .catch(async (err) => await interaction.followUp({ content: "An error occurred while updating your webring membership\n\`\`\`\n" + err + "\n\`\`\`", ephemeral: true }));
     },

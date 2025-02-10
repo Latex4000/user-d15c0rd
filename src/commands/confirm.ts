@@ -3,6 +3,7 @@ import { Command } from "./index.js";
 import { fetchHMAC } from "../fetch.js";
 import { Member, memberInfo } from "../types/member.js";
 import { siteUrl } from "../config.js";
+import { addRedirectRecord, getHosts, setHosts } from "../namecheap.js";
 
 const command: Command = {
     data: new SlashCommandBuilder()
@@ -42,10 +43,30 @@ const command: Command = {
 
         await fetchHMAC<Member[]>(siteUrl("/api/member"), "PUT", member)
             .then(async members => {
-                const member = members[0];
-                if (!member)
+                const memberRes = members[0];
+                if (!memberRes)
                     throw new Error("Member not found in response");
-                await interaction.followUp({ content: `You have confirmed your webring membership`, embeds: [memberInfo(member)], ephemeral: true });
+
+                try {
+                    const hosts = await getHosts();
+                    const aliasHostName = member.alias
+                        .toLowerCase()
+                        .replace(/[^a-z0-9-_]/g, "")
+                        .replace(/^-+|-+$/g, "")
+                        .slice(0, 63);
+                    if (!aliasHostName) {
+                        await interaction.followUp({ content: `You have confirmed your webring membership, but your alias is invalid for DNS records (no redirect is set from \`YOURUSERNAME.nonacademic.net\` to ${member.site!})`, embeds: [memberInfo(memberRes)], ephemeral: true });
+                        return;
+                    }
+                    addRedirectRecord(hosts, aliasHostName, member.site!);
+                    await setHosts(hosts);
+                } catch (e) {
+                    await interaction.editReply(`An error occurred while fetching the DNS data\n\`\`\`\n${e}\n\`\`\``);
+                    console.error(e);
+                    return;
+                }
+
+                await interaction.followUp({ content: `You have confirmed your webring membership`, embeds: [memberInfo(memberRes)], ephemeral: true });
             })
             .catch(async (err) => await interaction.followUp({ content: "An error occurred while confirming your webring membership\n\`\`\`\n" + err + "\n\`\`\`", ephemeral: true }));
     },
