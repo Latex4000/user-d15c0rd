@@ -1,5 +1,6 @@
 import { ChatInputCommandInteraction, SlashCommandBuilder, SlashCommandOptionsOnlyBuilder } from "discord.js";
 import action from "./action.js";
+import bsky from "./bsky.js";
 import change from "./change.js";
 import confirm from "./confirm.js";
 import del from "./delete.js";
@@ -19,6 +20,7 @@ export interface Command {
 const commands: Command[] = [];
 
 commands.push(action);
+commands.push(bsky);
 commands.push(change);
 commands.push(confirm);
 commands.push(del);

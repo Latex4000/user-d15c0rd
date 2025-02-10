@@ -11,6 +11,13 @@
         "owner_id": "",
         "feed": ""
     },
+    "namecheap": {
+        "username": "",
+        "key": "",
+        "client_ip": "",
+        "sld": "",
+        "tld": ""
+    },
     "youtube": {
         "client_id": "",
         "project_id": "",
