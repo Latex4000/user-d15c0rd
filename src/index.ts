@@ -71,25 +71,6 @@ export async function respond (interaction: ChatInputCommandInteraction, message
         return interaction.reply(messageData);
 }
 
-let shuttingDown = false;
-process.on("SIGINT", async () => {
-    if (shuttingDown)
-        return;
-
-    shuttingDown = true;
-    console.log("Shutting down...");
-
-    // Delete all commands in development mode
-    if (process.env.NODE_ENV === "development")
-        await rest.put(
-            Routes.applicationCommands(config.discord.client_id),
-            { body: [] }
-        ).catch(console.error);
-
-    await discordClient.destroy();
-    process.exit(0);
-});
-
 await discordClient.login(config.discord.token);
 
 export { discordClient };
