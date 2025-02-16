@@ -16,7 +16,7 @@ export async function anonymousConfirmation (interaction: ChatInputCommandIntera
         return false;
     }
 
-    const confirmation = await confirm(interaction, "Anonymous posts will not have a colour on the site, a discord link, or a name attached to it\nPeople in the server will not be able to know who posted this\nYou will not be able to claim/delete it later either\nAre you sure you want to post anonymously?")
+    const confirmation = await confirm(interaction, "Anonymous posts will not have a colour on the site, a discord link, or a name attached to it\nPeople in the server will not be able to know who posted this\n\n**You will not be able to claim/delete it later either**\n\nAre you sure you want to post anonymously?")
     if (!confirmation)
         return false;  
     
