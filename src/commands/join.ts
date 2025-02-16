@@ -1,4 +1,4 @@
-import { ChatInputCommandInteraction, SlashCommandBuilder } from "discord.js";
+import { ChatInputCommandInteraction, InteractionContextType, SlashCommandBuilder } from "discord.js";
 import { Command } from "./index.js";
 import { fetchHMAC } from "../fetch.js";
 import { Member, memberInfo } from "../types/member.js";
@@ -26,7 +26,9 @@ const command: Command = {
                 .setDescription("(hex code) colour used to sign your posts created")
                 .setRequired(false)
         )
-        .setDMPermission(false),
+        .setContexts([
+            InteractionContextType.Guild,
+        ]),
     run: async (interaction: ChatInputCommandInteraction) => {
         await interaction.deferReply();
         // Get JSON Data

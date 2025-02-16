@@ -1,4 +1,4 @@
-import { ChatInputCommandInteraction, SlashCommandBuilder } from "discord.js";
+import { ChatInputCommandInteraction, InteractionContextType, SlashCommandBuilder } from "discord.js";
 import { Command } from "./index.js";
 import { Member, memberInfo } from "../types/member.js";
 import { fetchHMAC } from "../fetch.js";
@@ -8,7 +8,11 @@ const command: Command = {
     data: new SlashCommandBuilder()
         .setName("info")
         .setDescription("Get your information from the webring")
-        .setDMPermission(false),
+        .setContexts([
+            InteractionContextType.BotDM,
+            InteractionContextType.Guild,
+            InteractionContextType.PrivateChannel
+        ]),
     run: async (interaction: ChatInputCommandInteraction) => {
         await interaction.deferReply();
         // Get JSON Data

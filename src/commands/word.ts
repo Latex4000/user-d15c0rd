@@ -1,4 +1,4 @@
-import { ChatInputCommandInteraction, SlashCommandBuilder } from "discord.js";
+import { ChatInputCommandInteraction, InteractionContextType, SlashCommandBuilder } from "discord.js";
 import { Command } from "./index.js";
 import AdmZip from "adm-zip";
 import { fetchHMAC } from "../fetch.js";
@@ -6,6 +6,7 @@ import { Word } from "../types/word.js";
 import config, { siteUrl } from "../config.js";
 import { discordClient } from "../index.js";
 import confirm from "../confirm.js";
+import { anonymousConfirmation } from "../anonymous.js";
 
 const fileSizeLimit = 2 ** 20; // 1 MB
 
@@ -37,9 +38,24 @@ const command: Command = {
                 .setDescription("The tags of the post (comma separated)")
                 .setRequired(false)
         )
-        .setDMPermission(false),
+        .addBooleanOption(option =>
+            option
+                .setName("anonymous")
+                .setDescription("Whether to post fully anonymously (no colour on site, no discord link, no name)")
+                .setRequired(false)
+        )
+        .setContexts([
+            InteractionContextType.BotDM,
+            InteractionContextType.Guild,
+            InteractionContextType.PrivateChannel
+        ]),
     run: async (interaction: ChatInputCommandInteraction) => {
         await interaction.deferReply();
+        
+        const anonymous = interaction.options.getBoolean("anonymous") ?? false;
+        const anonCheck = await anonymousConfirmation(interaction, anonymous);
+        if (!anonCheck)
+            return;
 
         const attachment = interaction.options.getAttachment("md_txt_file");
         const assets = interaction.options.getAttachment("assets");
@@ -84,7 +100,8 @@ const command: Command = {
             return;
 
         const formData = new FormData();
-        formData.set("discord", interaction.user.id);
+        if (!anonymous)
+            formData.set("discord", interaction.user.id);
         formData.set("title", title);
         formData.set("md", content);
         if (tags) {
@@ -119,14 +136,15 @@ const command: Command = {
         // Send form data to the server
         await fetchHMAC<Word>(siteUrl("/api/words"), "POST", formData)
             .then(async word => {
-                discordClient.channels.fetch(config.discord.feed)
-                    .then(async channel => {
-                        if (channel?.isSendable())
-                            await channel.send({ content: `Uploaded by <@${interaction.user.id}>\n**Link:** ${config.collective.site_url}/words/${Math.floor(new Date(word.date).getTime() / 1000).toString(10)}` });
-                        else
-                            console.error("Failed to send message to feed channel: Channel is not sendable");
-                    })
-                    .catch(err => console.error("Failed to send message to feed channel", err));
+                if (!anonymous)
+                    discordClient.channels.fetch(config.discord.feed)
+                        .then(async channel => {
+                            if (channel?.isSendable())
+                                await channel.send({ content: `Uploaded by <@${interaction.user.id}>\n**Link:** ${config.collective.site_url}/words/${Math.floor(new Date(word.date).getTime() / 1000).toString(10)}` });
+                            else
+                                console.error("Failed to send message to feed channel: Channel is not sendable");
+                        })
+                        .catch(err => console.error("Failed to send message to feed channel", err));
                 await interaction.followUp({ content: `Post uploaded successfully\n**Link:** ${siteUrl(`/words/${Math.floor(new Date(word.date).getTime() / 1000).toString(10)}`)}` });
             })
             .catch(async e => {

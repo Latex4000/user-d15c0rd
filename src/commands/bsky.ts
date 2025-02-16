@@ -1,4 +1,4 @@
-import { ChatInputCommandInteraction, SlashCommandBuilder } from "discord.js";
+import { ChatInputCommandInteraction, InteractionContextType, SlashCommandBuilder } from "discord.js";
 import { Command } from "./index.js";
 import { Member } from "../types/member.js";
 import { fetchHMAC } from "../fetch.js";
@@ -15,7 +15,9 @@ const command: Command = {
                 .setDescription("Your DID from the bsky dashboard (did:plc:1234 or did=did:plc:1234)")
                 .setRequired(true),
         )
-        .setDMPermission(false),
+        .setContexts([
+            InteractionContextType.Guild,
+        ]),
     run: async (interaction: ChatInputCommandInteraction) => {
         await interaction.deferReply();
         let member: Member | undefined = undefined;

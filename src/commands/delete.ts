@@ -1,4 +1,4 @@
-import { ChatInputCommandInteraction, SlashCommandBuilder } from "discord.js";
+import { ChatInputCommandInteraction, InteractionContextType, SlashCommandBuilder } from "discord.js";
 import { Command } from "./index.js";
 import { fetchHMAC } from "../fetch.js";
 import { siteUrl } from "../config.js";
@@ -33,7 +33,11 @@ const command: Command = {
                 ])
                 .setRequired(true)
         )
-        .setDMPermission(false),
+        .setContexts([
+            InteractionContextType.BotDM,
+            InteractionContextType.Guild,
+            InteractionContextType.PrivateChannel
+        ]),
     run: async (interaction: ChatInputCommandInteraction) => {
         await interaction.deferReply();
 

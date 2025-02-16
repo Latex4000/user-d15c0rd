@@ -1,4 +1,4 @@
-import { ChatInputCommandInteraction, SlashCommandBuilder } from "discord.js";
+import { ChatInputCommandInteraction, InteractionContextType, SlashCommandBuilder } from "discord.js";
 import Parser from 'rss-parser';
 import { Command } from "./index.js";
 import { siteUrl } from "../config.js";
@@ -29,7 +29,11 @@ const command: Command = {
                 .setDescription("A custom description for the link")
                 .setRequired(false),
         )
-        .setDMPermission(false),
+        .setContexts([
+            InteractionContextType.BotDM,
+            InteractionContextType.Guild,
+            InteractionContextType.PrivateChannel
+        ]),
     run: async (interaction: ChatInputCommandInteraction) => {
         await interaction.deferReply();
         

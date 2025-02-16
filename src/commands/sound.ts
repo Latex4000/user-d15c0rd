@@ -1,15 +1,16 @@
-import { ActionRowBuilder, ButtonBuilder, ButtonStyle, ChatInputCommandInteraction, MessageComponentInteraction, SlashCommandBuilder } from "discord.js";
+import { ChatInputCommandInteraction, InteractionContextType, SlashCommandBuilder } from "discord.js";
 import { Command } from "./index.js";
 import { mkdir, unlink, writeFile } from "node:fs/promises";
 import { discordClient, respond } from "../index.js";
 import { uploadSoundcloud } from "../oauth/soundcloud.js";
 import { exec } from "node:child_process";
-import { createHash, randomUUID } from "node:crypto";
+import { createHash } from "node:crypto";
 import { fetchHMAC } from "../fetch.js";
 import youtubeClient from "../oauth/youtube.js";
 import { extname } from "node:path";
 import config, { canUseSoundcloud, canUseYoutube, siteUrl } from "../config.js";
 import confirm from "../confirm.js";
+import { anonymousConfirmation } from "../anonymous.js";
 
 const validExtensions = [".mp4", ".mov", ".mkv", ".avi", ".wmv"];
 
@@ -21,7 +22,8 @@ async function uploadToYoutubeAndSoundcloud(
     title: string,
     description: string,
     tags: string[],
-    uploadThumbnail: boolean
+    uploadThumbnail: boolean,
+    anonymous: boolean,
 ) {
     let soundcloudUrl = "https://example.com/";
     let youtubeUrl = "https://example.com/";
@@ -63,14 +65,15 @@ async function uploadToYoutubeAndSoundcloud(
     }
 
     // Send to the config.discord.feed channel too
-    discordClient.channels.fetch(config.discord.feed)
-        .then(async channel => {
-            if (channel?.isSendable())
-                await channel.send({ content: `Uploaded by <@${interaction.user.id}>\nTitle: ${title}\nYouTube: ${youtubeUrl}\nSoundCloud: ${soundcloudUrl}` });
-            else
-                console.error("Failed to send message to feed channel: Channel is not sendable");
-        })
-        .catch(err => console.error("Failed to send message to feed channel", err));
+    if (!anonymous)
+        discordClient.channels.fetch(config.discord.feed)
+            .then(async channel => {
+                if (channel?.isSendable())
+                    await channel.send({ content: `Uploaded by <@${interaction.user.id}>\nTitle: ${title}\nYouTube: ${youtubeUrl}\nSoundCloud: ${soundcloudUrl}` });
+                else
+                    console.error("Failed to send message to feed channel: Channel is not sendable");
+            })
+            .catch(err => console.error("Failed to send message to feed channel", err));
 
     return {
         youtubeUrl,
@@ -118,7 +121,17 @@ const command: Command = {
                 .setDescription("Optional comma-separated tags for the song")
                 .setRequired(false)
         )
-        .setDMPermission(false),
+        .addBooleanOption(option =>
+            option
+                .setName("anonymous")
+                .setDescription("Whether to post fully anonymously (no discord link, no name)")
+                .setRequired(false)
+        )
+        .setContexts([
+            InteractionContextType.BotDM,
+            InteractionContextType.Guild,
+            InteractionContextType.PrivateChannel
+        ]),
     run: async (interaction: ChatInputCommandInteraction) => {
         await interaction.deferReply();
 
@@ -127,6 +140,11 @@ const command: Command = {
             await respond(interaction, { content: "I cannot send messages in this channel", ephemeral: true });
             return;
         }
+
+        const anonymous = interaction.options.getBoolean("anonymous") ?? false;
+        const anonCheck = await anonymousConfirmation(interaction, anonymous);
+        if (!anonCheck)
+            return;
 
         const audio = interaction.options.getAttachment("audio");
         const image = interaction.options.getAttachment("image");
@@ -246,7 +264,7 @@ const command: Command = {
             // Upload the video to YouTube
             let urls: { youtubeUrl: string, soundcloudUrl: string } | undefined = undefined;
             try {
-                urls = await uploadToYoutubeAndSoundcloud(interaction, audioPath, imagePath, videoPath, title, description, tags, video ? true : false);
+                urls = await uploadToYoutubeAndSoundcloud(interaction, audioPath, imagePath, videoPath, title, description, tags, video ? true : false, anonymous);
             } catch (err) {
                 await respond(interaction, {
                     content: `An error occurred while uploading the video\n\`\`\`\n${err}\n\`\`\``,
@@ -261,7 +279,8 @@ const command: Command = {
             }
 
             const formData = new FormData();
-            formData.set("discord", interaction.user.id);
+            if (!anonymous)
+                formData.set("discord", interaction.user.id);
             formData.set("title", title);
             formData.set("soundcloudUrl", urls.soundcloudUrl);
             formData.set("youtubeUrl", urls.youtubeUrl);

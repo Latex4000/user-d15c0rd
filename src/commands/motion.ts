@@ -1,17 +1,16 @@
-import { ActionRowBuilder, ButtonBuilder, ButtonStyle, ChatInputCommandInteraction, MessageComponentInteraction, SlashCommandBuilder } from "discord.js";
+import { ChatInputCommandInteraction, InteractionContextType, SlashCommandBuilder } from "discord.js";
 import { Command } from "./index.js";
 import { mkdir, unlink, writeFile } from "node:fs/promises";
 import { discordClient, respond } from "../index.js";
-import { uploadSoundcloud } from "../oauth/soundcloud.js";
 import { exec } from "node:child_process";
-import { createHash, randomUUID } from "node:crypto";
+import { createHash } from "node:crypto";
 import { fetchHMAC } from "../fetch.js";
 import youtubeClient from "../oauth/youtube.js";
-import { openAsBlob } from "node:fs";
 import { extname } from "node:path";
-import config, { canUseSoundcloud, canUseYoutube, siteUrl } from "../config.js";
+import config, { siteUrl } from "../config.js";
 import confirm from "../confirm.js";
 import { Motion } from "../types/motion.js";
+import { anonymousConfirmation } from "../anonymous.js";
 
 const validExtensions = [".mp4", ".mov", ".mkv", ".avi", ".wmv"];
 
@@ -49,15 +48,18 @@ const command: Command = {
                 .setDescription("Thumbnail image for motion")
                 .setRequired(false)
         )
-        .setDMPermission(false),
+        .setContexts([
+            InteractionContextType.BotDM,
+            InteractionContextType.Guild,
+            InteractionContextType.PrivateChannel
+        ]),
     run: async (interaction: ChatInputCommandInteraction) => {
         await interaction.deferReply();
 
-        if (!interaction.channel?.isSendable()) {
-            // WHAT?
-            await respond(interaction, { content: "I cannot send messages in this channel", ephemeral: true });
+        const anonymous = interaction.options.getBoolean("anonymous") ?? false;
+        const anonCheck = await anonymousConfirmation(interaction, anonymous);
+        if (!anonCheck)
             return;
-        }
 
         const video = interaction.options.getAttachment("video");
         const title = interaction.options.getString("title");
@@ -156,19 +158,20 @@ const command: Command = {
             const youtubeUrl = `https://www.youtube.com/watch?v=${ytData.id}`;
 
             // Send to the config.discord.feed channel too
-            discordClient.channels.fetch(config.discord.feed)
-                .then(async channel => {
-                    if (channel?.isSendable())
-                        await channel.send({ content: `Uploaded by <@${interaction.user.id}>\nTitle: ${title}\nYouTube: ${youtubeUrl}` });
-                    else
-                        console.error("Failed to send message to feed channel: Channel is not sendable");
-                })
-                .catch(err => console.error("Failed to send message to feed channel", err));
+            if (!anonymous)
+                discordClient.channels.fetch(config.discord.feed)
+                    .then(async channel => {
+                        if (channel?.isSendable())
+                            await channel.send({ content: `Uploaded by <@${interaction.user.id}>\nTitle: ${title}\nYouTube: ${youtubeUrl}` });
+                        else
+                            console.error("Failed to send message to feed channel: Channel is not sendable");
+                    })
+                    .catch(err => console.error("Failed to send message to feed channel", err));
 
             const motionData = {
                 title,
                 youtubeUrl,
-                memberDiscord: interaction.user.id,
+                memberDiscord: anonymous ? undefined : interaction.user.id,
                 date: new Date(),
                 tags,
             }

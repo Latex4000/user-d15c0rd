@@ -1,4 +1,4 @@
-import { ChatInputCommandInteraction, SlashCommandBuilder, ApplicationCommandOptionType, ActionRowBuilder, StringSelectMenuBuilder, ComponentType, Message, RepliableInteraction, ButtonBuilder, ButtonStyle } from "discord.js";
+import { ChatInputCommandInteraction, SlashCommandBuilder, ApplicationCommandOptionType, ActionRowBuilder, StringSelectMenuBuilder, ComponentType, Message, RepliableInteraction, ButtonBuilder, ButtonStyle, InteractionContextType } from "discord.js";
 import { Command, commands } from "./index.js";
 import { levenshteinDistance } from "../levenshtein.js";
 
@@ -29,7 +29,11 @@ const command: Command = {
                 .setDescription("The command you want help with")
                 .setRequired(false)
         )
-        .setDMPermission(false),
+        .setContexts([
+            InteractionContextType.BotDM,
+            InteractionContextType.Guild,
+            InteractionContextType.PrivateChannel
+        ]),
     run: async (interaction: ChatInputCommandInteraction) => {
         await interaction.deferReply();
         const commandName = interaction.options.getString("command");
