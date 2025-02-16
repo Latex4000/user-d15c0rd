@@ -158,15 +158,14 @@ const command: Command = {
             const youtubeUrl = `https://www.youtube.com/watch?v=${ytData.id}`;
 
             // Send to the config.discord.feed channel too
-            if (!anonymous)
-                discordClient.channels.fetch(config.discord.feed)
-                    .then(async channel => {
-                        if (channel?.isSendable())
-                            await channel.send({ content: `Uploaded by <@${interaction.user.id}>\nTitle: ${title}\nYouTube: ${youtubeUrl}` });
-                        else
-                            console.error("Failed to send message to feed channel: Channel is not sendable");
-                    })
-                    .catch(err => console.error("Failed to send message to feed channel", err));
+            discordClient.channels.fetch(config.discord.feed)
+                .then(async channel => {
+                    if (channel?.isSendable())
+                        await channel.send({ content: `${anonymous ? "An anonymous user" : `<@${interaction.user.id}>`} uploaded a motion\nTitle: ${title}\nYouTube: ${youtubeUrl}` });
+                    else
+                        console.error("Failed to send message to feed channel: Channel is not sendable");
+                })
+                .catch(err => console.error("Failed to send message to feed channel", err));
 
             const motionData = {
                 title,

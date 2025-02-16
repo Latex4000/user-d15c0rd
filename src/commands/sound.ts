@@ -65,15 +65,15 @@ async function uploadToYoutubeAndSoundcloud(
     }
 
     // Send to the config.discord.feed channel too
-    if (!anonymous)
-        discordClient.channels.fetch(config.discord.feed)
-            .then(async channel => {
-                if (channel?.isSendable())
-                    await channel.send({ content: `Uploaded by <@${interaction.user.id}>\nTitle: ${title}\nYouTube: ${youtubeUrl}\nSoundCloud: ${soundcloudUrl}` });
-                else
-                    console.error("Failed to send message to feed channel: Channel is not sendable");
-            })
-            .catch(err => console.error("Failed to send message to feed channel", err));
+    
+    discordClient.channels.fetch(config.discord.feed)
+        .then(async channel => {
+            if (channel?.isSendable())
+                await channel.send({ content: `${anonymous ? "An anonymous user" : `<@${interaction.user.id}>`} uploaded a sound\nTitle: ${title}\nYouTube: ${youtubeUrl}\nSoundCloud: ${soundcloudUrl}` });
+            else
+                console.error("Failed to send message to feed channel: Channel is not sendable");
+        })
+        .catch(err => console.error("Failed to send message to feed channel", err));
 
     return {
         youtubeUrl,
