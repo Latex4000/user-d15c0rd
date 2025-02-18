@@ -119,7 +119,6 @@ const command: Command = {
                 await interaction.followUp({ content: `An error occurred while extracting the zip file\n\`\`\`\n${e}\n\`\`\``, ephemeral: true });
                 return;
             });
-        console.log(formData);
 
         // Send form data to the server
         await fetchHMAC<Sight>(siteUrl("/api/sights"), "POST", formData)
