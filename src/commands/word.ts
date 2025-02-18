@@ -109,7 +109,6 @@ const command: Command = {
 
         // Extract zip and append every single file data into "assets" form data key
         if (assets) {
-            const files: Buffer[] = [];
             await fetch(assets.url)
                 .then(res => res.arrayBuffer())
                 .then(async buffer => {
@@ -124,14 +123,13 @@ const command: Command = {
                         if (file.length > fileSizeLimit)
                             throw new Error(`File ${entry.entryName} exceeds the size limit of 1 MB`);
 
-                        files.push(file);
+                        formData.set("assets", new Blob([file]), entry.entryName);
                     }
                 })
                 .catch(async e => {
                     await interaction.followUp({ content: `An error occurred while extracting the zip file\n\`\`\`\n${e}\n\`\`\``, ephemeral: true });
                     return;
                 });
-            formData.set("assets", new Blob(files));
         }
 
         // Send form data to the server

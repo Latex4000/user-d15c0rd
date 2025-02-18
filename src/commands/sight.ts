@@ -87,7 +87,6 @@ const command: Command = {
             formData.set("tags", tags);
 
         // Extract zip and append every single file data into "assets" form data key
-        const files: Buffer[] = [];
         await fetch(images.url)
             .then(res => res.arrayBuffer())
             .then(async buffer => {
@@ -96,7 +95,7 @@ const command: Command = {
                     if (file.length > fileSizeLimit)
                         throw new Error(`File ${images.name} exceeds the size limit of 1 MB`);
 
-                    files.push(file);
+                    formData.set("assets", new Blob([file]), images.name);
                     return;
                 } else if (images.name.endsWith(".zip")) {
                     const zip = new AdmZip(Buffer.from(buffer));
@@ -110,7 +109,7 @@ const command: Command = {
                         if (file.length > fileSizeLimit)
                             throw new Error(`File ${entry.entryName} exceeds the size limit of 1 MB`);
 
-                        files.push(file);
+                        formData.set("assets", new Blob([file]), entry.entryName);
                     }
                 }
 
@@ -120,7 +119,6 @@ const command: Command = {
                 await interaction.followUp({ content: `An error occurred while extracting the zip file\n\`\`\`\n${e}\n\`\`\``, ephemeral: true });
                 return;
             });
-        formData.set("assets", new Blob(files), images.name);
         console.log(formData);
 
         // Send form data to the server
