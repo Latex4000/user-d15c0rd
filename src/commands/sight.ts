@@ -7,6 +7,7 @@ import { discordClient } from "../index.js";
 import confirm from "../confirm.js";
 import { anonymousConfirmation } from "../anonymous.js";
 import { Sight } from "../types/sight.js";
+import { ThingVisibilityChoices } from "../types/thing.js";
 
 const fileSizeLimit = 2 ** 20; // 1 MB
 
@@ -34,14 +35,15 @@ const command: Command = {
         )
         .addStringOption(option =>
             option
+                .setName("visibility")
+                .setDescription("Post anonymity level (users outside server always see it as anonymous).")
+                .addChoices(ThingVisibilityChoices)
+                .setRequired(true)
+        )
+        .addStringOption(option =>
+            option
                 .setName("tags")
                 .setDescription("The tags of the image(s) (comma separated)")
-                .setRequired(false)
-        )
-        .addBooleanOption(option =>
-            option
-                .setName("anonymous")
-                .setDescription("Whether to post fully anonymously (no colour on site, no discord link, no name)")
                 .setRequired(false)
         )
         .setContexts([

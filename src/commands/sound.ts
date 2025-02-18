@@ -11,6 +11,7 @@ import { extname } from "node:path";
 import config, { canUseSoundcloud, canUseYoutube, siteUrl } from "../config.js";
 import confirm from "../confirm.js";
 import { anonymousConfirmation } from "../anonymous.js";
+import { ThingVisibilityChoices } from "../types/thing.js";
 
 const validExtensions = [".mp4", ".mov", ".mkv", ".avi", ".wmv"];
 
@@ -103,6 +104,13 @@ const command: Command = {
                 .setDescription("The title of the song")
                 .setRequired(true)
         )
+        .addStringOption(option =>
+            option
+                .setName("visibility")
+                .setDescription("Post anonymity level (users outside server always see it as anonymous).")
+                .addChoices(ThingVisibilityChoices)
+                .setRequired(true)
+        )
         .addAttachmentOption(option =>
             option
                 .setName("video")
@@ -119,12 +127,6 @@ const command: Command = {
             option
                 .setName("tags")
                 .setDescription("Optional comma-separated tags for the song")
-                .setRequired(false)
-        )
-        .addBooleanOption(option =>
-            option
-                .setName("anonymous")
-                .setDescription("Whether to post fully anonymously (no discord link, no name)")
                 .setRequired(false)
         )
         .setContexts([

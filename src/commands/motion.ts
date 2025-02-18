@@ -11,6 +11,7 @@ import config, { siteUrl } from "../config.js";
 import confirm from "../confirm.js";
 import { Motion } from "../types/motion.js";
 import { anonymousConfirmation } from "../anonymous.js";
+import { ThingVisibilityChoices } from "../types/thing.js";
 
 const validExtensions = [".mp4", ".mov", ".mkv", ".avi", ".wmv"];
 
@@ -28,6 +29,13 @@ const command: Command = {
             option
                 .setName("title")
                 .setDescription("The title of the motion")
+                .setRequired(true)
+        )
+        .addStringOption(option =>
+            option
+                .setName("visibility")
+                .setDescription("Post anonymity level (users outside server always see it as anonymous).")
+                .addChoices(ThingVisibilityChoices)
                 .setRequired(true)
         )
         .addStringOption(option =>
