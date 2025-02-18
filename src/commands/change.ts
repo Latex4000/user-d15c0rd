@@ -128,8 +128,6 @@ const command: Command = {
                     } else if (member.site && member.addedRingToSite)
                         hosts = addRedirectRecord(hosts, newAliasHostName, member.site);
 
-                    console.log(atprotoIndex, redirectIndex, site && member.addedRingToSite, hosts);
-
                     await setHosts(hosts);
 
                     await interaction.followUp({ content: `You have updated your webring membership and your DNS records (allow ~30 minutes for them to be accepted by the internet)\n${atprotoIndex !== -1 ? `Updated ${oldAliasHostName}.nonacademic.net to ${newAliasHostName}.nonacademic.net for bsky\n` : ""}${redirectIndex !== -1 ? `Updated ${oldAliasHostName}.nonacademic.net to ${newAliasHostName}.nonacademic.net for your site redirect\n` : site && member.addedRingToSite ? `Added ${newAliasHostName}.nonacademic.net for your site redirect\n` : ""}`, embeds: [memberInfo(memberRes)], ephemeral: true });

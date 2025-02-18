@@ -2,7 +2,7 @@ import { ChatInputCommandInteraction, InteractionContextType, SlashCommandBuilde
 import { Command } from "./index.js";
 import { fetchHMAC } from "../fetch.js";
 import { siteUrl } from "../config.js";
-import { ThingType } from "../types/thing.js";
+import { ThingType, Things } from "../types/thing.js";
 import choose from "../choose.js";
 import { changeStatusSoundcloud } from "../oauth/soundcloud.js";
 import youtubeClient from "../oauth/youtube.js";
@@ -16,21 +16,7 @@ const command: Command = {
             option
                 .setName("thing_type")
                 .setDescription("The type of thing u want to restore")
-                .addChoices([
-                    {
-                        name: "Word",
-                        value: "words"
-                    },
-                    {
-                        name: "Sound",
-                        value: "sounds"
-                    },
-                    {
-                        name: "Motion",
-                        value: "motions"
-                    },
-
-                ])
+                .addChoices(Things.map(type => ({ name: type, value: type })))
                 .setRequired(true)
         )
         .setContexts([
