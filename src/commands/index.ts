@@ -10,6 +10,7 @@ import join from "./join.js";
 import motion from "./motion.js";
 import ping from "./ping.js";
 import restore from "./restore.js";
+import sight from "./sight.js";
 import sound from "./sound.js";
 import word from "./word.js";
 export interface Command {
@@ -30,6 +31,7 @@ commands.push(join);
 commands.push(motion);
 commands.push(ping);
 commands.push(restore);
+commands.push(sight);
 commands.push(sound);
 commands.push(word);
 

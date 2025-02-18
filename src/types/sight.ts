@@ -1,6 +1,7 @@
 import { Thing } from "./thing.js";
 
-export interface Word extends Thing {
+export interface Sight extends Thing {
+    description: string;
     date: Date;
     tags: string[];
 }
