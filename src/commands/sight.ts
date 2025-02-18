@@ -95,7 +95,7 @@ const command: Command = {
                     if (file.length > fileSizeLimit)
                         throw new Error(`File ${images.name} exceeds the size limit of 1 MB`);
 
-                    formData.set("assets", new Blob([file]), images.name);
+                    formData.append("assets", new Blob([file]), images.name);
                     return;
                 } else if (images.name.endsWith(".zip")) {
                     const zip = new AdmZip(Buffer.from(buffer));
@@ -109,7 +109,7 @@ const command: Command = {
                         if (file.length > fileSizeLimit)
                             throw new Error(`File ${entry.entryName} exceeds the size limit of 1 MB`);
 
-                        formData.set("assets", new Blob([file]), entry.entryName);
+                        formData.append("assets", new Blob([file]), entry.entryName);
                     }
                 }
 

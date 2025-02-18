@@ -123,7 +123,7 @@ const command: Command = {
                         if (file.length > fileSizeLimit)
                             throw new Error(`File ${entry.entryName} exceeds the size limit of 1 MB`);
 
-                        formData.set("assets", new Blob([file]), entry.entryName);
+                        formData.append("assets", new Blob([file]), entry.entryName);
                     }
                 })
                 .catch(async e => {
