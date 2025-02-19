@@ -7,7 +7,6 @@ import config, { siteUrl } from "../config.js";
 import { discordClient } from "../index.js";
 import confirm from "../confirm.js";
 import { anonymousConfirmation } from "../anonymous.js";
-import { ThingVisibilityChoices } from "../types/thing.js";
 
 const fileSizeLimit = 2 ** 20; // 1 MB
 
@@ -27,13 +26,6 @@ const command: Command = {
                 .setDescription("The title of the post")
                 .setRequired(true)
         )
-        .addStringOption(option =>
-            option
-                .setName("visibility")
-                .setDescription("Post anonymity level (users outside server always see it as anonymous).")
-                .addChoices(ThingVisibilityChoices)
-                .setRequired(true)
-        )
         .addAttachmentOption(option =>
             option
                 .setName("assets")
@@ -44,6 +36,12 @@ const command: Command = {
             option
                 .setName("tags")
                 .setDescription("The tags of the post (comma separated)")
+                .setRequired(false)
+        )
+        .addStringOption(option =>
+            option
+                .setName("show_colour")
+                .setDescription("Show your colour on site (default: true")
                 .setRequired(false)
         )
         .setContexts([
@@ -76,6 +74,7 @@ const command: Command = {
             await interaction.followUp({ content: "The post file must be a markdown or text file", ephemeral: true });
             return;
         }
+
         // Get file content
         let content: string;
         try {
