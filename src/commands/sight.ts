@@ -121,12 +121,12 @@ const command: Command = {
                 discordClient.channels.fetch(config.discord.feed)
                     .then(async channel => {
                         if (channel?.isSendable())
-                            await channel.send({ content: `<@${interaction.user.id}> uploaded a sight\n**Link:** ${config.collective.site_url}/sights/${sight.id}` });
+                            await channel.send({ content: `<@${interaction.user.id}> uploaded a sight\n**Link:** ${config.collective.site_url}/sights` });
                         else
                             console.error("Failed to send message to feed channel: Channel is not sendable");
                     })
                     .catch(err => console.error("Failed to send message to feed channel", err));
-                await interaction.followUp({ content: `Image(s) uploaded successfully\n**Link:** ${siteUrl(`/sights/${sight.id}`)}` });
+                await interaction.followUp({ content: `Image(s) uploaded successfully\n**Link:** ${siteUrl(`/sights`)}` });
             })
             .catch(async e => {
                 await interaction.followUp({ content: `An error occurred while uploading the post\n\`\`\`\n${e}\n\`\`\``, ephemeral: true });
