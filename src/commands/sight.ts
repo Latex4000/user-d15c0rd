@@ -5,7 +5,6 @@ import { fetchHMAC } from "../fetch.js";
 import config, { siteUrl } from "../config.js";
 import { discordClient } from "../index.js";
 import confirm from "../confirm.js";
-import { anonymousConfirmation } from "../anonymous.js";
 import { Sight } from "../types/sight.js";
 
 const fileSizeLimit = 2 ** 20; // 1 MB
@@ -40,8 +39,8 @@ const command: Command = {
         )
         .addBooleanOption(option =>
             option
-                .setName("anonymous")
-                .setDescription("Whether to post fully anonymously (no colour on site, no discord link, no name)")
+                .setName("show_colour")
+                .setDescription("Show your colour on site (default: true")
                 .setRequired(false)
         )
         .setContexts([
@@ -51,16 +50,12 @@ const command: Command = {
         ]),
     run: async (interaction: ChatInputCommandInteraction) => {
         await interaction.deferReply();
-        
-        const anonymous = interaction.options.getBoolean("anonymous") ?? false;
-        const anonCheck = await anonymousConfirmation(interaction, anonymous);
-        if (!anonCheck)
-            return;
 
         const images = interaction.options.getAttachment("images");
         const title = interaction.options.getString("title");
         const description = interaction.options.getString("description");
         const tags = interaction.options.getString("tags");
+        const showColour = interaction.options.getBoolean("show_colour");
 
         // Check for missing required options
         if (!images || !title || !description) {
@@ -79,10 +74,10 @@ const command: Command = {
             return;
 
         const formData = new FormData();
-        if (!anonymous)
-            formData.set("discord", interaction.user.id);
+        formData.set("discord", interaction.user.id);
         formData.set("title", title);
         formData.set("description", description);
+        formData.set("colour", showColour === false ? false : true);
         if (tags)
             formData.set("tags", tags);
 
@@ -126,12 +121,12 @@ const command: Command = {
                 discordClient.channels.fetch(config.discord.feed)
                     .then(async channel => {
                         if (channel?.isSendable())
-                            await channel.send({ content: `${anonymous ? "An anonymous user" : `<@${interaction.user.id}>`} uploaded a sight\n**Link:** ${config.collective.site_url}/sights/${Math.floor(new Date(sight.date).getTime() / 1000).toString(10)}` });
+                            await channel.send({ content: `<@${interaction.user.id}> uploaded a sight\n**Link:** ${config.collective.site_url}/sights` });
                         else
                             console.error("Failed to send message to feed channel: Channel is not sendable");
                     })
                     .catch(err => console.error("Failed to send message to feed channel", err));
-                await interaction.followUp({ content: `Image(s) uploaded successfully\n**Link:** ${siteUrl(`/sights/${Math.floor(new Date(sight.date).getTime() / 1000).toString(10)}`)}` });
+                await interaction.followUp({ content: `Image(s) uploaded successfully\n**Link:** ${siteUrl(`/sights`)}` });
             })
             .catch(async e => {
                 await interaction.followUp({ content: `An error occurred while uploading the post\n\`\`\`\n${e}\n\`\`\``, ephemeral: true });

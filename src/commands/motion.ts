@@ -10,7 +10,6 @@ import { extname } from "node:path";
 import config, { siteUrl } from "../config.js";
 import confirm from "../confirm.js";
 import { Motion } from "../types/motion.js";
-import { anonymousConfirmation } from "../anonymous.js";
 
 const validExtensions = [".mp4", ".mov", ".mkv", ".avi", ".wmv"];
 
@@ -48,6 +47,12 @@ const command: Command = {
                 .setDescription("Thumbnail image for motion")
                 .setRequired(false)
         )
+        .addBooleanOption(option =>
+            option
+                .setName("show_colour")
+                .setDescription("Show your colour on site (default: true")
+                .setRequired(false)
+        )
         .setContexts([
             InteractionContextType.BotDM,
             InteractionContextType.Guild,
@@ -56,17 +61,13 @@ const command: Command = {
     run: async (interaction: ChatInputCommandInteraction) => {
         await interaction.deferReply();
 
-        const anonymous = interaction.options.getBoolean("anonymous") ?? false;
-        const anonCheck = await anonymousConfirmation(interaction, anonymous);
-        if (!anonCheck)
-            return;
-
         const video = interaction.options.getAttachment("video");
         const title = interaction.options.getString("title");
         const description = interaction.options.getString("description") || "";
         const tagsString = interaction.options.getString("tags") ?? "";
         const tags = tagsString.length === 0 ? [] : tagsString.split(",").map((tag) => tag.trim());
         const thumbnail = interaction.options.getAttachment("thumbnail");
+        const showColour = interaction.options.getBoolean("show_colour");
 
         if (video === null || title === null) {
             await respond(interaction, { content: "You must provide both a video file, and a title", ephemeral: true });
@@ -161,7 +162,7 @@ const command: Command = {
             discordClient.channels.fetch(config.discord.feed)
                 .then(async channel => {
                     if (channel?.isSendable())
-                        await channel.send({ content: `${anonymous ? "An anonymous user" : `<@${interaction.user.id}>`} uploaded a motion\nTitle: ${title}\nYouTube: ${youtubeUrl}` });
+                        await channel.send({ content: `<@${interaction.user.id}> uploaded a motion\nTitle: ${title}\nYouTube: ${youtubeUrl}` });
                     else
                         console.error("Failed to send message to feed channel: Channel is not sendable");
                 })
@@ -170,7 +171,8 @@ const command: Command = {
             const motionData = {
                 title,
                 youtubeUrl,
-                memberDiscord: anonymous ? undefined : interaction.user.id,
+                memberDiscord: interaction.user.id,
+                showColour: showColour === false ? false : true,
                 date: new Date(),
                 tags,
             }

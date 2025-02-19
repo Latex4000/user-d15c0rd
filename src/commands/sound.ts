@@ -10,7 +10,6 @@ import youtubeClient from "../oauth/youtube.js";
 import { extname } from "node:path";
 import config, { canUseSoundcloud, canUseYoutube, siteUrl } from "../config.js";
 import confirm from "../confirm.js";
-import { anonymousConfirmation } from "../anonymous.js";
 
 const validExtensions = [".mp4", ".mov", ".mkv", ".avi", ".wmv"];
 
@@ -23,7 +22,6 @@ async function uploadToYoutubeAndSoundcloud(
     description: string,
     tags: string[],
     uploadThumbnail: boolean,
-    anonymous: boolean,
 ) {
     let soundcloudUrl = "https://example.com/";
     let youtubeUrl = "https://example.com/";
@@ -69,7 +67,7 @@ async function uploadToYoutubeAndSoundcloud(
     discordClient.channels.fetch(config.discord.feed)
         .then(async channel => {
             if (channel?.isSendable())
-                await channel.send({ content: `${anonymous ? "An anonymous user" : `<@${interaction.user.id}>`} uploaded a sound\nTitle: ${title}\nYouTube: ${youtubeUrl}\nSoundCloud: ${soundcloudUrl}` });
+                await channel.send({ content: `<@${interaction.user.id}> uploaded a sound\nTitle: ${title}\nYouTube: ${youtubeUrl}\nSoundCloud: ${soundcloudUrl}` });
             else
                 console.error("Failed to send message to feed channel: Channel is not sendable");
         })
@@ -123,8 +121,8 @@ const command: Command = {
         )
         .addBooleanOption(option =>
             option
-                .setName("anonymous")
-                .setDescription("Whether to post fully anonymously (no discord link, no name)")
+                .setName("show_colour")
+                .setDescription("Show your colour on site (default: true")
                 .setRequired(false)
         )
         .setContexts([
@@ -141,11 +139,6 @@ const command: Command = {
             return;
         }
 
-        const anonymous = interaction.options.getBoolean("anonymous") ?? false;
-        const anonCheck = await anonymousConfirmation(interaction, anonymous);
-        if (!anonCheck)
-            return;
-
         const audio = interaction.options.getAttachment("audio");
         const image = interaction.options.getAttachment("image");
         const video = interaction.options.getAttachment("video");
@@ -153,6 +146,7 @@ const command: Command = {
         const description = interaction.options.getString("description") || "";
         const tagsString = interaction.options.getString("tags") ?? "";
         const tags = tagsString.length === 0 ? [] : tagsString.split(",").map((tag) => tag.trim());
+        const showColour = interaction.options.getBoolean("show_colour");
 
         if (audio === null || image === null || title === null) {
             await respond(interaction, { content: "You must provide both an audio and image file, and a title", ephemeral: true });
@@ -264,7 +258,7 @@ const command: Command = {
             // Upload the video to YouTube
             let urls: { youtubeUrl: string, soundcloudUrl: string } | undefined = undefined;
             try {
-                urls = await uploadToYoutubeAndSoundcloud(interaction, audioPath, imagePath, videoPath, title, description, tags, video ? true : false, anonymous);
+                urls = await uploadToYoutubeAndSoundcloud(interaction, audioPath, imagePath, videoPath, title, description, tags, video ? true : false);
             } catch (err) {
                 await respond(interaction, {
                     content: `An error occurred while uploading the video\n\`\`\`\n${err}\n\`\`\``,
@@ -279,13 +273,13 @@ const command: Command = {
             }
 
             const formData = new FormData();
-            if (!anonymous)
-                formData.set("discord", interaction.user.id);
+            formData.set("discord", interaction.user.id);
             formData.set("title", title);
             formData.set("soundcloudUrl", urls.soundcloudUrl);
             formData.set("youtubeUrl", urls.youtubeUrl);
             formData.set("track", audio.url);
             formData.set("cover", image.url);
+            formData.set("colour", showColour === false ? false : true);
             if (tagsString)
                 formData.set("tags", tagsString);
 
