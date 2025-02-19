@@ -119,7 +119,7 @@ const command: Command = {
                 .setDescription("Optional comma-separated tags for the song")
                 .setRequired(false)
         )
-        .addStringOption(option =>
+        .addBooleanOption(option =>
             option
                 .setName("show_colour")
                 .setDescription("Show your colour on site (default: true")
@@ -146,6 +146,7 @@ const command: Command = {
         const description = interaction.options.getString("description") || "";
         const tagsString = interaction.options.getString("tags") ?? "";
         const tags = tagsString.length === 0 ? [] : tagsString.split(",").map((tag) => tag.trim());
+        const showColour = interaction.options.getBoolean("show_colour");
 
         if (audio === null || image === null || title === null) {
             await respond(interaction, { content: "You must provide both an audio and image file, and a title", ephemeral: true });
@@ -278,6 +279,7 @@ const command: Command = {
             formData.set("youtubeUrl", urls.youtubeUrl);
             formData.set("track", audio.url);
             formData.set("cover", image.url);
+            formData.set("colour", showColour === false ? false : true);
             if (tagsString)
                 formData.set("tags", tagsString);
 
