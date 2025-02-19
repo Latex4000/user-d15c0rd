@@ -10,7 +10,6 @@ import { extname } from "node:path";
 import config, { siteUrl } from "../config.js";
 import confirm from "../confirm.js";
 import { Motion } from "../types/motion.js";
-import { anonymousConfirmation } from "../anonymous.js";
 
 const validExtensions = [".mp4", ".mov", ".mkv", ".avi", ".wmv"];
 
@@ -61,11 +60,6 @@ const command: Command = {
         ]),
     run: async (interaction: ChatInputCommandInteraction) => {
         await interaction.deferReply();
-
-        const anonymous = interaction.options.getBoolean("anonymous") ?? false;
-        const anonCheck = await anonymousConfirmation(interaction, anonymous);
-        if (!anonCheck)
-            return;
 
         const video = interaction.options.getAttachment("video");
         const title = interaction.options.getString("title");
@@ -167,7 +161,7 @@ const command: Command = {
             discordClient.channels.fetch(config.discord.feed)
                 .then(async channel => {
                     if (channel?.isSendable())
-                        await channel.send({ content: `${anonymous ? "An anonymous user" : `<@${interaction.user.id}>`} uploaded a motion\nTitle: ${title}\nYouTube: ${youtubeUrl}` });
+                        await channel.send({ content: `<@${interaction.user.id}> uploaded a motion\nTitle: ${title}\nYouTube: ${youtubeUrl}` });
                     else
                         console.error("Failed to send message to feed channel: Channel is not sendable");
                 })
@@ -176,7 +170,7 @@ const command: Command = {
             const motionData = {
                 title,
                 youtubeUrl,
-                memberDiscord: anonymous ? undefined : interaction.user.id,
+                memberDiscord: interaction.user.id,
                 date: new Date(),
                 tags,
             }

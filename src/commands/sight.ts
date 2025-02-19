@@ -5,7 +5,6 @@ import { fetchHMAC } from "../fetch.js";
 import config, { siteUrl } from "../config.js";
 import { discordClient } from "../index.js";
 import confirm from "../confirm.js";
-import { anonymousConfirmation } from "../anonymous.js";
 import { Sight } from "../types/sight.js";
 
 const fileSizeLimit = 2 ** 20; // 1 MB
@@ -51,11 +50,6 @@ const command: Command = {
         ]),
     run: async (interaction: ChatInputCommandInteraction) => {
         await interaction.deferReply();
-        
-        const anonymous = interaction.options.getBoolean("anonymous") ?? false;
-        const anonCheck = await anonymousConfirmation(interaction, anonymous);
-        if (!anonCheck)
-            return;
 
         const images = interaction.options.getAttachment("images");
         const title = interaction.options.getString("title");
@@ -79,8 +73,7 @@ const command: Command = {
             return;
 
         const formData = new FormData();
-        if (!anonymous)
-            formData.set("discord", interaction.user.id);
+        formData.set("discord", interaction.user.id);
         formData.set("title", title);
         formData.set("description", description);
         if (tags)
@@ -126,7 +119,7 @@ const command: Command = {
                 discordClient.channels.fetch(config.discord.feed)
                     .then(async channel => {
                         if (channel?.isSendable())
-                            await channel.send({ content: `${anonymous ? "An anonymous user" : `<@${interaction.user.id}>`} uploaded a sight\n**Link:** ${config.collective.site_url}/sights/${Math.floor(new Date(sight.date).getTime() / 1000).toString(10)}` });
+                            await channel.send({ content: `<@${interaction.user.id}> uploaded a sight\n**Link:** ${config.collective.site_url}/sights/${Math.floor(new Date(sight.date).getTime() / 1000).toString(10)}` });
                         else
                             console.error("Failed to send message to feed channel: Channel is not sendable");
                     })
