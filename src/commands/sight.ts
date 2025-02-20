@@ -68,12 +68,6 @@ const command: Command = {
             return;
         }
 
-        // Check if the images file is a zip or an image
-        if (images && !images.name.endsWith(".zip") && !images.name.endsWith(".png") && !images.name.endsWith(".jpg") && !images.name.endsWith(".jpeg") && !images.name.endsWith(".gif") && !images.name.endsWith(".webp")) {
-            await interaction.followUp({ content: "The assets file must be a zip file", ephemeral: true });
-            return;
-        }
-
         const ownWork = await confirm(interaction, "This is for content that you made yourself\nIs this your own work?");
         if (!ownWork)
             return;
@@ -92,12 +86,8 @@ const command: Command = {
             const buffer = await fetch(images.url)
                 .then(res => res.arrayBuffer());
 
-            if (images.name.endsWith(".png") || images.name.endsWith(".jpg") || images.name.endsWith(".jpeg") || images.name.endsWith(".gif") || images.name.endsWith(".webp")) {
-                const file = Buffer.from(buffer);
-
-                formData.append("assets", new Blob([file]), images.name);
-                return;
-            } else if (images.name.endsWith(".zip")) {
+            // Try extracting as zip first, if it fails, assume it's a single image
+            try {
                 const zip = new AdmZip(Buffer.from(buffer));
                 const entries = zip.getEntries();
 
@@ -109,6 +99,11 @@ const command: Command = {
 
                     formData.append("assets", new Blob([file]), entry.entryName);
                 }
+            } catch (e) {
+                if (formData.has("assets"))
+                    throw e;
+
+                formData.append("assets", new Blob([buffer]), images.name);
             }
         } catch (e) {
             await interaction.followUp({ content: `An error occurred while processing the assets\n\`\`\`\n${e}\n\`\`\``, ephemeral: true });
