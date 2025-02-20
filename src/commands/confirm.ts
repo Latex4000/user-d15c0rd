@@ -2,7 +2,7 @@ import { ChatInputCommandInteraction, InteractionContextType, SlashCommandBuilde
 import { Command } from "./index.js";
 import { fetchHMAC } from "../fetch.js";
 import { Member, memberInfo } from "../types/member.js";
-import { siteUrl } from "../config.js";
+import config, { siteUrl } from "../config.js";
 import { addRedirectRecord, getHosts, memberAliasToHostName, setHosts } from "../namecheap.js";
 
 const command: Command = {
@@ -64,7 +64,7 @@ const command: Command = {
                     err = e;
                 }
 
-                await interaction.followUp({ content: `You have confirmed your webring membership ${!err ? `and added the redirect from \`${memberAliasToHostName(memberRes.alias)}.nonacademic.net\` to ${member.site!}\nallow ~30 minutes for the redirect to be accepted by the internet` : `but an error occurred while adding the redirect to DNS records\n\`\`\`\n${err}\n\`\`\``}`, embeds: [memberInfo(memberRes)], ephemeral: true });
+                await interaction.followUp({ content: `You have confirmed your webring membership ${!err ? `and added the redirect from \`${memberAliasToHostName(memberRes.alias)}.nonacademic.net\` to ${member.site!}\nallow ~30 minutes for the redirect to be accepted by the internet` : `but an error occurred while adding the redirect to DNS records <@${config.discord.owner_id}>\n\`\`\`\n${err}\n\`\`\``}`, embeds: [memberInfo(memberRes)], ephemeral: true });
             })
             .catch(async (err) => await interaction.followUp({ content: "An error occurred while confirming your webring membership\n\`\`\`\n" + err + "\n\`\`\`", ephemeral: true }));
     },
