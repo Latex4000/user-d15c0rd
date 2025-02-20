@@ -104,28 +104,32 @@ const command: Command = {
             formData.set("tags", tags);
 
         // Extract zip and append every single file data into "assets" form data key
-        if (assets) {
-            await fetch(assets.url)
-                .then(res => res.arrayBuffer())
-                .then(async buffer => {
-                    const zip = new AdmZip(Buffer.from(buffer));
-                    const entries = zip.getEntries();
+        if (assets)
+            try {
+                const buffer = await fetch(assets.url)
+                    .then(res => res.arrayBuffer());
 
-                    for (const entry of entries) {
-                        if (entry.isDirectory)
-                            throw new Error(`Zip file cannot contain directories. Please only include files, and reference them in the markdown file`);
+                const zip = new AdmZip(Buffer.from(buffer));
+                const entries = zip.getEntries();
 
-                        const file = entry.getData();
-                        if (file.length > fileSizeLimit)
-                            throw new Error(`File ${entry.entryName} exceeds the size limit of 1 MB`);
+                for (const entry of entries) {
+                    if (entry.isDirectory)
+                        throw new Error(`Zip file cannot contain directories. Please only include files, and reference them in the markdown file`);
 
-                        formData.append("assets", new Blob([file]), entry.entryName);
-                    }
-                })
-                .catch(async e => {
-                    await interaction.followUp({ content: `An error occurred while extracting the zip file\n\`\`\`\n${e}\n\`\`\``, ephemeral: true });
-                    return;
-                });
+                    const file = entry.getData();
+                    if (file.length > fileSizeLimit)
+                        throw new Error(`File ${entry.entryName} exceeds the size limit of 1 MB`);
+
+                    formData.append("assets", new Blob([file]), entry.entryName);
+                }
+            } catch (e) {
+                await interaction.followUp({ content: `An error occurred while processing the assets\n\`\`\`\n${e}\n\`\`\``, ephemeral: true });
+                return;
+            }
+
+        if (assets && !formData.has("assets")) {
+            await interaction.followUp({ content: "No assets found in the zip file", ephemeral: true });
+            return;
         }
 
         // Send form data to the server

@@ -82,38 +82,41 @@ const command: Command = {
             formData.set("tags", tags);
 
         // Extract zip and append every single file data into "assets" form data key
-        await fetch(images.url)
-            .then(res => res.arrayBuffer())
-            .then(async buffer => {
-                if (images.name.endsWith(".png") || images.name.endsWith(".jpg") || images.name.endsWith(".jpeg") || images.name.endsWith(".gif") || images.name.endsWith(".webp")) {
-                    const file = Buffer.from(buffer);
+        try {
+            const buffer = await fetch(images.url)
+                .then(res => res.arrayBuffer());
+
+            if (images.name.endsWith(".png") || images.name.endsWith(".jpg") || images.name.endsWith(".jpeg") || images.name.endsWith(".gif") || images.name.endsWith(".webp")) {
+                const file = Buffer.from(buffer);
+                if (file.length > fileSizeLimit)
+                    throw new Error(`File ${images.name} exceeds the size limit of 1 MB`);
+
+                formData.append("assets", new Blob([file]), images.name);
+                return;
+            } else if (images.name.endsWith(".zip")) {
+                const zip = new AdmZip(Buffer.from(buffer));
+                const entries = zip.getEntries();
+
+                for (const entry of entries) {
+                    if (entry.isDirectory)
+                        throw new Error(`Zip file cannot contain directories. Please only include files, and reference them in the markdown file`);
+
+                    const file = entry.getData();
                     if (file.length > fileSizeLimit)
-                        throw new Error(`File ${images.name} exceeds the size limit of 1 MB`);
+                        throw new Error(`File ${entry.entryName} exceeds the size limit of 1 MB`);
 
-                    formData.append("assets", new Blob([file]), images.name);
-                    return;
-                } else if (images.name.endsWith(".zip")) {
-                    const zip = new AdmZip(Buffer.from(buffer));
-                    const entries = zip.getEntries();
-
-                    for (const entry of entries) {
-                        if (entry.isDirectory)
-                            throw new Error(`Zip file cannot contain directories. Please only include files, and reference them in the markdown file`);
-
-                        const file = entry.getData();
-                        if (file.length > fileSizeLimit)
-                            throw new Error(`File ${entry.entryName} exceeds the size limit of 1 MB`);
-
-                        formData.append("assets", new Blob([file]), entry.entryName);
-                    }
+                    formData.append("assets", new Blob([file]), entry.entryName);
                 }
+            }
+        } catch (e) {
+            await interaction.followUp({ content: `An error occurred while processing the assets\n\`\`\`\n${e}\n\`\`\``, ephemeral: true });
+            return;
+        }
 
-                return;
-            })
-            .catch(async e => {
-                await interaction.followUp({ content: `An error occurred while extracting the zip file\n\`\`\`\n${e}\n\`\`\``, ephemeral: true });
-                return;
-            });
+        if (!formData.has("assets")) {
+            await interaction.followUp({ content: "No images found", ephemeral: true });
+            return;
+        }
 
         // Send form data to the server
         await fetchHMAC<Sight>(siteUrl("/api/sights"), "POST", formData)
