@@ -7,8 +7,6 @@ import { discordClient } from "../index.js";
 import confirm from "../confirm.js";
 import { Sight } from "../types/sight.js";
 
-const fileSizeLimit = 2 ** 20; // 1 MB
-
 const command: Command = {
     data: new SlashCommandBuilder()
         .setName("sight")
@@ -96,8 +94,6 @@ const command: Command = {
 
             if (images.name.endsWith(".png") || images.name.endsWith(".jpg") || images.name.endsWith(".jpeg") || images.name.endsWith(".gif") || images.name.endsWith(".webp")) {
                 const file = Buffer.from(buffer);
-                if (file.length > fileSizeLimit)
-                    throw new Error(`File ${images.name} exceeds the size limit of 1 MB`);
 
                 formData.append("assets", new Blob([file]), images.name);
                 return;
@@ -110,8 +106,6 @@ const command: Command = {
                         throw new Error(`Zip file cannot contain directories. Please only include files, and reference them in the markdown file`);
 
                     const file = entry.getData();
-                    if (file.length > fileSizeLimit)
-                        throw new Error(`File ${entry.entryName} exceeds the size limit of 1 MB`);
 
                     formData.append("assets", new Blob([file]), entry.entryName);
                 }

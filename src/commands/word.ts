@@ -7,8 +7,6 @@ import config, { siteUrl } from "../config.js";
 import { discordClient } from "../index.js";
 import confirm from "../confirm.js";
 
-const fileSizeLimit = 2 ** 20; // 1 MB
-
 const command: Command = {
     data: new SlashCommandBuilder()
         .setName("word")
@@ -117,8 +115,6 @@ const command: Command = {
                         throw new Error(`Zip file cannot contain directories. Please only include files, and reference them in the markdown file`);
 
                     const file = entry.getData();
-                    if (file.length > fileSizeLimit)
-                        throw new Error(`File ${entry.entryName} exceeds the size limit of 1 MB`);
 
                     formData.append("assets", new Blob([file]), entry.entryName);
                 }
