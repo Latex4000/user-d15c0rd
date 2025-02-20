@@ -49,6 +49,7 @@ const command: Command = {
                 if (!memberRes)
                     throw new Error("Member not found in response");
 
+                let err: unknown | undefined = undefined;
                 try {
                     const hosts = await getHosts();
                     const aliasHostName = memberAliasToHostName(memberRes.alias);
@@ -59,11 +60,11 @@ const command: Command = {
                     addRedirectRecord(hosts, aliasHostName, member.site!);
                     await setHosts(hosts);
                 } catch (e) {
-                    await interaction.followUp(`An error occurred while fetching the DNS data\n\`\`\`\n${e}\n\`\`\``);
                     console.error(e);
+                    err = e;
                 }
 
-                await interaction.followUp({ content: `You have confirmed your webring membership and added the redirect from \`${memberAliasToHostName(memberRes.alias)}.nonacademic.net\` to ${member.site!}\nallow ~30 minutes for the redirect to be accepted by the internet`, embeds: [memberInfo(memberRes)], ephemeral: true });
+                await interaction.followUp({ content: `You have confirmed your webring membership ${!err ? `and added the redirect from \`${memberAliasToHostName(memberRes.alias)}.nonacademic.net\` to ${member.site!}\nallow ~30 minutes for the redirect to be accepted by the internet` : `but an error occurred while adding the redirect to DNS records\n\`\`\`\n${err}\n\`\`\``}`, embeds: [memberInfo(memberRes)], ephemeral: true });
             })
             .catch(async (err) => await interaction.followUp({ content: "An error occurred while confirming your webring membership\n\`\`\`\n" + err + "\n\`\`\`", ephemeral: true }));
     },
