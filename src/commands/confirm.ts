@@ -59,9 +59,8 @@ const command: Command = {
                     addRedirectRecord(hosts, aliasHostName, member.site!);
                     await setHosts(hosts);
                 } catch (e) {
-                    await interaction.editReply(`An error occurred while fetching the DNS data\n\`\`\`\n${e}\n\`\`\``);
+                    await interaction.followUp(`An error occurred while fetching the DNS data\n\`\`\`\n${e}\n\`\`\``);
                     console.error(e);
-                    return;
                 }
 
                 await interaction.followUp({ content: `You have confirmed your webring membership and added the redirect from \`${memberAliasToHostName(memberRes.alias)}.nonacademic.net\` to ${member.site!}\nallow ~30 minutes for the redirect to be accepted by the internet`, embeds: [memberInfo(memberRes)], ephemeral: true });

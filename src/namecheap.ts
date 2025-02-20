@@ -29,7 +29,22 @@ export async function getHosts(): Promise<HostRecord[]> {
 
     const parser = new Parser();
     const data = await parser.parseStringPromise(text);
-    const rawHostsData = data["ApiResponse"]["CommandResponse"][0]["DomainDNSGetHostsResult"][0]["host"];
+
+    // Check for error
+    const responseStatus = data["ApiResponse"]?.["$"]["Status"];
+    if (responseStatus === "ERROR") {
+        const error = data["ApiResponse"]?.["Errors"]?.[0]?.["Error"]?.[0];
+        throw new Error(`${error?.["$"]["Number"]}: ${error?.["_"]}`);
+    }
+
+    const commandResponse = data["ApiResponse"]?.["CommandResponse"]?.[0];
+    if (!commandResponse)
+        throw new Error("No `CommandResponse` in response from Namecheap");
+
+    const rawHostsData = commandResponse["host"];
+    if (!rawHostsData)
+        throw new Error("No hosts data in response from Namecheap");
+
     return rawHostsData.map((host: any) => ({
         HostName: host["$"]["Name"],
         RecordType: host["$"]["Type"],
@@ -101,9 +116,11 @@ export async function setHosts(hostRecords: HostRecord[]) {
     const text = await response.text();
     const parser = new Parser();
     const data = await parser.parseStringPromise(text);
-    const responeStatus = data["ApiResponse"]["$"]["Status"];
-    if (responeStatus === "ERROR")
-        throw new Error(data["ApiResponse"]["Errors"][0]["Error"][0]["$"]["Number"] + ": " + data["ApiResponse"]["Errors"][0]["Error"][0]["_"]);
+    const responeStatus = data["ApiResponse"]?.["$"]["Status"];
+    if (responeStatus === "ERROR") {
+        const error = data["ApiResponse"]?.["Errors"]?.[0]?.["Error"]?.[0];
+        throw new Error(`${error?.["$"]["Number"]}: ${error?.["_"]}`);
+    }
 
     return data;
 }
