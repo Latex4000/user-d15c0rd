@@ -39,6 +39,12 @@ const command: Command = {
         )
         .addBooleanOption(option =>
             option
+                .setName("is_pixel_art")
+                .setDescription("Is this pixel art? (default: false)")
+                .setRequired(false)
+        )
+        .addBooleanOption(option =>
+            option
                 .setName("show_colour")
                 .setDescription("Show your colour on site (default: true")
                 .setRequired(false)
@@ -55,6 +61,7 @@ const command: Command = {
         const title = interaction.options.getString("title");
         const description = interaction.options.getString("description");
         const tags = interaction.options.getString("tags");
+        const pixelated = interaction.options.getBoolean("is_pixel_art");
         const showColour = interaction.options.getBoolean("show_colour");
 
         // Check for missing required options
@@ -77,6 +84,7 @@ const command: Command = {
         formData.set("discord", interaction.user.id);
         formData.set("title", title);
         formData.set("description", description);
+        formData.set("pixelated", pixelated ? true : false);
         formData.set("colour", showColour === false ? false : true);
         if (tags)
             formData.set("tags", tags);
