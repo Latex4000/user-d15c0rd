@@ -41,7 +41,7 @@ export async function getHosts(): Promise<HostRecord[]> {
     if (!commandResponse)
         throw new Error("No `CommandResponse` in response from Namecheap");
 
-    const rawHostsData = commandResponse["host"];
+    const rawHostsData = commandResponse["DomainDNSGetHostsResult"]?.[0]?.["host"];
     if (!rawHostsData)
         throw new Error("No hosts data in response from Namecheap");
 
