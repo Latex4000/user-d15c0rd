@@ -6,6 +6,6 @@ export interface Thing {
     memberDiscord: Member["discord"];
 }
 
-export const Things = ["sights", "words", "sounds", "motions"] as const;
+export const Things = ["actions", "sights", "words", "sounds", "motions"] as const;
 
 export type ThingType = typeof Things[number];

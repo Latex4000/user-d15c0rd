@@ -45,6 +45,7 @@ const command: Command = {
 
         // Based on thingType, decide the functionality to perform in other places (yt/sc etc) it's a switch block cuz it shouldn't be too massive for each case
         switch (thingType) {
+            case "actions":
             case "words":
                 break;
             case "sounds":
