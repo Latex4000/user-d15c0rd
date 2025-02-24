@@ -105,8 +105,8 @@ const command: Command = {
                         let audioStreams = 0;
                         for (const line of lines) {
                             if (line.startsWith("codec_name="))
-                                if (!["h264", "aac"].includes(line.split("=")[1]))
-                                    return reject("The video file must be h264 video and aac audio");
+                                if (!["h264", "aac", "mp3"].includes(line.split("=")[1]))
+                                    return reject("The video file must be h264 video and aac/mp3 audio");
 
                             if (line.startsWith("codec_type=video")) {
                                 videoStream = true;
