@@ -106,7 +106,7 @@ const command: Command = {
                         for (const line of lines) {
                             if (line.startsWith("codec_name="))
                                 if (!["h264", "aac", "mp3"].includes(line.split("=")[1]))
-                                    return reject("The video file must be h264 video and aac/mp3 audio");
+                                    return reject(`The video file must be h264 video and aac/mp3 audio\nSee result below:\n\n${stdout}`);
 
                             if (line.startsWith("codec_type=video")) {
                                 videoStream = true;
