@@ -21,10 +21,22 @@ class YoutubeClient {
             const tokenFile = await readFile("ytToken.json", "utf-8");
             const token = JSON.parse(tokenFile);
             this.auth.setCredentials(token);
+            this.updateTokens();
             return this.hasAccessToken = true;
         } catch {
             return false;
         }
+    }
+
+    updateTokens () {
+        if (!this.auth)
+            return;
+
+        // https://developers.google.com/identity/protocols/oauth2/web-server#node.js_8
+        this.auth.on("tokens", async (tokens) => {
+            if (tokens.refresh_token)
+                await writeFile("ytToken.json", JSON.stringify(tokens));
+        });
     }
 
     async getAccessToken(sendMessageToOwner: (message: string) => Promise<unknown>): Promise<void> {
@@ -72,6 +84,7 @@ class YoutubeClient {
 
             this.auth.setCredentials(tokens);
             await writeFile("ytToken.json", JSON.stringify(tokens));
+            this.updateTokens();
             this.hasAccessToken = true;
         } catch (error) {
             await _sendMessageToOwner("Failed to get token for YouTube");
