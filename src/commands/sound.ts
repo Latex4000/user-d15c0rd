@@ -11,6 +11,7 @@ import { extname } from "node:path";
 import config, { canUseSoundcloud, canUseYoutube, siteUrl } from "../config.js";
 import confirm from "../confirm.js";
 
+const verticalAspectRatioThresh = 1.34;
 const validExtensions = [".mp4", ".mov", ".mkv", ".avi", ".wmv"];
 
 async function uploadToYoutubeAndSoundcloud(
@@ -79,6 +80,34 @@ async function uploadToYoutubeAndSoundcloud(
     }
 }
 
+// Checks if an image aspect ratio is considered horizontal
+async function checkImageAspectRatio(imagePath: string): Promise<{ isHorizontal: boolean, width: number, height: number }> {
+    return new Promise((resolve, reject) => {
+        exec(`ffprobe -v error -select_streams v:0 -show_entries stream=width,height -of csv=s=x:p=0 "${imagePath}"`, (err, stdout, stderr) => {
+            if (err) {
+                return reject(err);
+            }
+            
+            const dimensions = stdout.trim().split('x');
+            if (dimensions.length !== 2) {
+                return reject(new Error('Failed to get image dimensions'));
+            }
+            
+            const width = parseInt(dimensions[0]);
+            const height = parseInt(dimensions[1]);
+            
+            if (isNaN(width) || isNaN(height)) {
+                return reject(new Error('Invalid image dimensions'));
+            }
+            
+            // Consider the image horizontal if the aspect ratio is greater than threshold
+            const isHorizontal = width / height >= verticalAspectRatioThresh;
+            
+            resolve({isHorizontal, width, height});
+        });
+    });
+}
+
 const command: Command = {
     data: new SlashCommandBuilder()
         .setName("sound")
@@ -125,6 +154,12 @@ const command: Command = {
                 .setDescription("Show your colour on site (default: true")
                 .setRequired(false)
         )
+        .addBooleanOption(option =>
+            option
+                .setName("allow_vertical")
+                .setDescription("Allow vertical/square image (may be uploaded as a short)")
+                .setRequired(false)
+        )
         .setContexts([
             InteractionContextType.BotDM,
             InteractionContextType.Guild,
@@ -147,6 +182,7 @@ const command: Command = {
         const tagsString = interaction.options.getString("tags") ?? "";
         const tags = tagsString.length === 0 ? [] : tagsString.split(",").map((tag) => tag.trim());
         const showColour = interaction.options.getBoolean("show_colour");
+        const allowVertical = interaction.options.getBoolean("allow_vertical") || false;
 
         if (audio === null || image === null || title === null) {
             await respond(interaction, { content: "You must provide both an audio and image file, and a title", ephemeral: true });
@@ -165,11 +201,40 @@ const command: Command = {
             return;
         }
 
+        await mkdir(".tmp", { recursive: true });
+
+        // Download the image file first and check its aspect ratio
+        const imagePath = `./.tmp/${createHash("sha256").update(image.url).digest("hex")}${image.name.endsWith(".png") ? ".png" : ".jpg"}`;
+        await fetch(image.url)
+            .then(async response => writeFile(imagePath, Buffer.from(await response.arrayBuffer())));
+
+        try {
+            const { isHorizontal, width, height } = await checkImageAspectRatio(imagePath);
+            
+            if (!isHorizontal && !allowVertical) {
+                await respond(interaction, { 
+                    content: `Your image has a vertical/square aspect ratio (**${width}x${height}**; aspect ratio: **${(width / height).toFixed(2)}**; aspect ratio threshold: **${verticalAspectRatioThresh}**).\nThis may be uploaded as a short on YouTube, which you probably don't want.\nIf you want to continue anyway, please use the \`allow_vertical\` option or provide a horizontal image.`, 
+                    ephemeral: true 
+                });
+                await unlink(imagePath);
+                return;
+            }
+        } catch (err) {
+            console.error("Failed to check image aspect ratio", err);
+            await respond(interaction, { 
+                content: `Failed to check image aspect ratio. Please ensure your image is horizontal.\n\`\`\`\n${err}\n\`\`\``, 
+                ephemeral: true 
+            });
+            await unlink(imagePath);
+            return;
+        }
+
         // Check if the video file is suitable for youtube
         const videoPath = `./.tmp/${interaction.user.id}.mp4`;
         if (video) {
             if (!validExtensions.includes(extname(video.name))) {
                 await respond(interaction, { content: "The video file must be an mp4 file", ephemeral: true });
+                await unlink(imagePath);
                 return;
             }
             await fetch(video.url)
@@ -188,6 +253,10 @@ const command: Command = {
                         let videoStreams = 0;
                         let audioStream = false;
                         let audioStreams = 0;
+                        let isVideoHorizontal = true;
+                        let videoWidth = 0;
+                        let videoHeight = 0;
+
                         for (const line of lines) {
                             if (line.startsWith("codec_name="))
                                 if (!["h264", "aac"].includes(line.split("=")[1]))
@@ -199,6 +268,17 @@ const command: Command = {
                             } else if (line.startsWith("codec_type=audio")) {
                                 audioStream = true;
                                 audioStreams++;
+                            } else if (line.startsWith("width=")) {
+                                videoWidth = parseInt(line.split("=")[1]);
+                            } else if (line.startsWith("height=")) {
+                                videoHeight = parseInt(line.split("=")[1]);
+                            }
+                        }
+
+                        if (videoWidth > 0 && videoHeight > 0) {
+                            isVideoHorizontal = videoWidth / videoHeight >= verticalAspectRatioThresh;
+                            if (!isVideoHorizontal && !allowVertical) {
+                                return reject(`Your video has a vertical/square aspect ratio (${videoWidth}x${videoHeight}). This may be uploaded as a short on YouTube. If you want to continue anyway, please use the \`allow_vertical\` option or provide a horizontal video.`);
                             }
                         }
                         if (!videoStream || !audioStream || videoStreams !== 1 || audioStreams !== 1)
@@ -213,28 +293,33 @@ const command: Command = {
                     ephemeral: true
                 });
                 await unlink(videoPath);
+                await unlink(imagePath);
                 return;
             }
         }
 
-        // Confirmation that the person's information is correct, and the image aspect ratio is correct
-        const update = await confirm(interaction, `Title: ${title}\nDescription: ${description || "N/A"}\nTags: ${tags.length > 0 ? tags.join(", ") : "N/A"}\n\nNote that if your ${video ? "video" : "image"} has a vertical (tall)/square aspect ratio, it may end up being uploaded as a short instead.\nIf you don't want, then ensure your ${video ? "video" : "image"} is wide\n\nIs all of your information correct?`);
-        if (!update)
+        // Confirmation that the person's information is correct
+        const shortWarning = allowVertical ? "\n\n**You've enabled the 'allow_vertical' option, so your content may be uploaded as a short.**" : "";
+        const update = await confirm(interaction, `Title: ${title}\nDescription: ${description || "N/A"}\nTags: ${tags.length > 0 ? tags.join(", ") : "N/A"}${shortWarning}\n\nIs all of your information correct?`);
+        if (!update) {
+            await unlink(imagePath);
+            if (video)
+                await unlink(videoPath);
             return;
+        }
 
         const ownWork = await confirm(interaction, "This is for content that you made yourself, and doesn't contain content that would nuke the channels\nIs this your own work?");
-        if (!ownWork)
+        if (!ownWork) {
+            await unlink(imagePath);
+            if (video)
+                await unlink(videoPath);
             return;
-
-        await mkdir(".tmp", { recursive: true });
+        }
 
         // Download files and save them with a hashed name
         const audioPath = `./.tmp/${createHash("sha256").update(audio.url).digest("hex")}${audio.name.endsWith(".mp3") ? ".mp3" : ".wav"}`;
-        const imagePath = `./.tmp/${createHash("sha256").update(image.url).digest("hex")}${image.name.endsWith(".png") ? ".png" : ".jpg"}`;
         await fetch(audio.url)
             .then(async response => writeFile(audioPath, Buffer.from(await response.arrayBuffer())));
-        await fetch(image.url)
-            .then(async response => writeFile(imagePath, Buffer.from(await response.arrayBuffer())));
 
         // Const to delete the temporary video file and the downloaded files
         const deleteTemporaryFiles = () => Promise.allSettled([
@@ -246,8 +331,10 @@ const command: Command = {
         try {
             if (canUseYoutube && !video) {
                 // Run ffmpeg to create a video file
+                const waitMessage = await interaction.channel.send("Creating the video...");
                 await new Promise<void>((resolve, reject) => {
                     exec(`ffmpeg -loop 1 -i "${imagePath}" -i "${audioPath}" -vf "scale='min(1920, floor(iw/2)*2)':-2,format=yuv420p" -c:v libx264 -preset medium -profile:v main -c:a aac -shortest -movflags +faststart ${videoPath}`, async (err, stdout, stderr) => {
+                        await waitMessage.delete();
                         if (err)
                             return reject(err);
                         resolve();
