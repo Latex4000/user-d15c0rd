@@ -213,7 +213,7 @@ const command: Command = {
             
             if (!isHorizontal && !allowVertical) {
                 await respond(interaction, { 
-                    content: `Your image has a vertical/square aspect ratio (**${width}x${height}**; aspect ratio: **${(width / height).toFixed(2)}**; aspect ratio threshold: **${verticalAspectRatioThresh}**).\nThis may be uploaded as a short on YouTube, which you probably don't want.\nIf you want to continue anyway, please use the \`allow_vertical\` option or provide a horizontal image.`, 
+                    content: `Your image has a vertical/square aspect ratio (**${width}x${height}**; aspect ratio: **${(width / height).toFixed(2)}**; aspect ratio threshold: **${verticalAspectRatioThresh}**).\nThis may be uploaded as a short on YouTube, which you probably don't want **especially if your content contains copyright material, as it will be fully blocked by YouTube if it is a short**.\nIf you want to continue anyway, please use the \`allow_vertical\` option or provide a horizontal image.`, 
                     ephemeral: true 
                 });
                 await unlink(imagePath);
@@ -278,7 +278,7 @@ const command: Command = {
                         if (videoWidth > 0 && videoHeight > 0) {
                             isVideoHorizontal = videoWidth / videoHeight >= verticalAspectRatioThresh;
                             if (!isVideoHorizontal && !allowVertical) {
-                                return reject(`Your video has a vertical/square aspect ratio (${videoWidth}x${videoHeight}). This may be uploaded as a short on YouTube. If you want to continue anyway, please use the \`allow_vertical\` option or provide a horizontal video.`);
+                                return reject(`Your video has a vertical/square aspect ratio (**${videoWidth}x${videoHeight}**; aspect ratio: **${(videoWidth / videoHeight).toFixed(2)}**; aspect ratio threshold: **${verticalAspectRatioThresh}**).\nThis may be uploaded as a short on YouTube, which you probably don't want **especially if your content contains copyright material, as it will be fully blocked by YouTube if it is a short**.\nIf you want to continue anyway, please use the \`allow_vertical\` option or provide a horizontal video.`);
                             }
                         }
                         if (!videoStream || !audioStream || videoStreams !== 1 || audioStreams !== 1)
