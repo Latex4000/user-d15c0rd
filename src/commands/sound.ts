@@ -40,7 +40,7 @@ async function uploadToYoutubeAndSoundcloud(
     let uniqueTags = [...new Set([...allTags, ...defaultTags])].filter(tag => tag.length > 0);
     while (uniqueTags.join(", ").length > 300) {
         const lastTag = uniqueTags.pop();
-        if (lastTag && uniqueTags.join(", ").length < 200) {
+        if (lastTag && uniqueTags.join("").length < 200) {
             uniqueTags.push(lastTag);
             break;
         }
