@@ -92,7 +92,10 @@ async function uploadToYoutubeAndSoundcloud(
     // Update youtube description
     if (canUseYoutube)
         try {
-            await youtubeClient.updateDescription(youtubeUrl, `${baseDescription}\nSoundCloud: ${soundcloudUrl}\n\nMusic from LaTeX 4000.\nUse our music however you want, just give credit to the collective`);
+            const video = await youtubeClient.getVideo(youtubeUrl);
+            if (!video.snippet)
+                throw new Error("Failed to get video snippet");
+            await youtubeClient.updateDescription(video, `${baseDescription}\nSoundCloud: ${soundcloudUrl}\n\nMusic from LaTeX 4000.\nUse our music however you want, just give credit to the collective`);
         } catch (err) {
             console.error(err);
             await respond(interaction, {

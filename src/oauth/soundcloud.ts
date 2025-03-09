@@ -75,3 +75,18 @@ export async function changeStatusSoundcloud(url: string, sharing: "public" | "p
         body: JSON.stringify({ track: { sharing } })
     });
 }
+
+export async function changeSoundcloudDescription(url: string, description: string) {
+    const id = new URL(url).searchParams.get("id");
+    if (!id)
+        throw new Error("Invalid Soundcloud URL");
+
+    await fetch(`https://api.soundcloud.com/tracks/${id}`, {
+        method: "PUT",
+        headers: {
+            "Authorization": `OAuth ${await getSoundcloudAccessToken()}`,
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ track: { description } })
+    });
+}

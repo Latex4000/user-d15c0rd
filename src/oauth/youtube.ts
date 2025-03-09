@@ -152,7 +152,7 @@ class YoutubeClient {
         return video;
     }
 
-    async updateDescription(url: string, description: string): Promise<void> {
+    async getVideo(url: string): Promise<youtube_v3.Schema$Video> {
         if (this.auth == null || this.youtube == null || !this.hasAccessToken)
             throw new Error("YouTube client not initialized");
 
@@ -161,12 +161,32 @@ class YoutubeClient {
         if (videoID == null)
             throw new Error("Invalid video URL");
 
+        const res = await this.youtube.videos.list({
+            auth: this.auth,
+            part: ["snippet", "status"],
+            id: [videoID],
+        });
+        const video = res.data.items?.[0];
+        if (video == null)
+            throw new Error("Video not found");
+
+        return video;
+    }
+
+    async updateDescription(video: youtube_v3.Schema$Video, description: string): Promise<void> {
+        if (this.auth == null || this.youtube == null || !this.hasAccessToken)
+            throw new Error("YouTube client not initialized");
+
+        if (!video.snippet)
+            throw new Error("Video does not have a snippet");
+
         await this.youtube.videos.update({
             auth: this.auth,
             part: ["snippet"],
             requestBody: {
-                id: videoID,
+                id: video.id,
                 snippet: {
+                    ...video.snippet,
                     description,
                 },
             },
