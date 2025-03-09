@@ -101,7 +101,7 @@ class YoutubeClient {
             part: ["snippet", "status"],
             requestBody: {
                 snippet: {
-                    categoryId: "10",
+                    categoryId: uploadType === "sounds" ? "10" : "23",
                     title,
                     description,
                     tags,
