@@ -21,16 +21,42 @@ async function uploadToYoutubeAndSoundcloud(
     videoPath: string,
     title: string,
     description: string,
+    genre: string,
     tags: string[],
     uploadThumbnail: boolean,
 ) {
     let soundcloudUrl = "https://example.com/";
     let youtubeUrl = "https://example.com/";
 
+    // allTags go in description via hashtags
+    const allTags = [...tags];
+    if (genre)
+        allTags.push(genre);
+    const defaultTags = ["music", "indie music", "unsigned artist", "original music", "new music", "collective music", "group music", "collective", "group", config.collective.name];
+    const hashtags = allTags.map(tag => `#${tag.replace(/\s+/g, '')}`).join(' ');
+
+    // Ensure tags are unique, not empty, and the entire combination is within 200-300 characters
+    // uniqueTags go in tags
+    let uniqueTags = [...new Set([...allTags, ...defaultTags])].filter(tag => tag.length > 0);
+    while (uniqueTags.join(", ").length > 300) {
+        const lastTag = uniqueTags.pop();
+        if (lastTag && uniqueTags.join(", ").length < 200) {
+            uniqueTags.push(lastTag);
+            break;
+        }
+    }
+
+    const releaseDate = new Date().toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+    })
+    const baseDescription = `${description.length > 0 ? `${description}\n\n` : ""}Genre: ${genre}\n${hashtags.length > 0 ? `Tags: ${hashtags}\n` : ""}Released: ${releaseDate}\n\nSite: ${config.collective.site_url}`;
+
     // Upload to YouTube
     if (canUseYoutube) {
         try {
-            const ytData = await youtubeClient.upload(title, `${description}\n\nTags: ${tags.length > 0 ? tags.join(", ") : "N/A"}`, tags, videoPath, "sounds", uploadThumbnail ? imagePath : undefined);
+            const ytData = await youtubeClient.upload(title, baseDescription, uniqueTags, videoPath, "sounds", uploadThumbnail ? imagePath : undefined);
             if (ytData.status?.uploadStatus !== "uploaded") {
                 await respond(interaction, {
                     content: `An error occurred while uploading the video\n\`\`\`\n${JSON.stringify(ytData, null, 2)}\n\`\`\``,
@@ -50,9 +76,10 @@ async function uploadToYoutubeAndSoundcloud(
     }
 
     // Upload to SoundCloud
-    if (canUseSoundcloud) {
+    const soundcloudDescription = `${baseDescription}\nYouTube: ${youtubeUrl}\n\nMusic from LaTeX 4000.\nUse our music however you want, just give credit to the collective`;
+    if (canUseSoundcloud)
         try {
-            soundcloudUrl = await uploadSoundcloud(title, `${description}\n\nTags: ${tags ? tags.join(", ") : "N/A"}`, tags || [], audioPath, imagePath);
+            soundcloudUrl = await uploadSoundcloud(title, soundcloudDescription, uniqueTags, audioPath, imagePath);
         } catch (err) {
             console.error(err);
             await respond(interaction, {
@@ -61,10 +88,21 @@ async function uploadToYoutubeAndSoundcloud(
             });
             return;
         }
-    }
+
+    // Update youtube description
+    if (canUseYoutube)
+        try {
+            await youtubeClient.updateDescription(youtubeUrl, `${baseDescription}\nSoundCloud: ${soundcloudUrl}\n\nMusic from LaTeX 4000.\nUse our music however you want, just give credit to the collective`);
+        } catch (err) {
+            console.error(err);
+            await respond(interaction, {
+                content: `An error occurred while updating the youtube description\n\`\`\`\n${err}\n\`\`\``,
+                ephemeral: true
+            });
+            return;
+        }
 
     // Send to the config.discord.feed channel too
-    
     discordClient.channels.fetch(config.discord.feed)
         .then(async channel => {
             if (channel?.isSendable())
@@ -130,6 +168,12 @@ const command: Command = {
                 .setDescription("The title of the song")
                 .setRequired(true)
         )
+        .addStringOption(option =>
+            option
+                .setName("genre")
+                .setDescription("Main genre/descriptor for song")
+                .setRequired(true)
+        )
         .addAttachmentOption(option =>
             option
                 .setName("video")
@@ -178,14 +222,15 @@ const command: Command = {
         const image = interaction.options.getAttachment("image");
         const video = interaction.options.getAttachment("video");
         const title = interaction.options.getString("title");
+        const genre = interaction.options.getString("genre");
         const description = interaction.options.getString("description") || "";
         const tagsString = interaction.options.getString("tags") ?? "";
         const tags = tagsString.length === 0 ? [] : tagsString.split(",").map((tag) => tag.trim());
         const showColour = interaction.options.getBoolean("show_colour");
         const allowVertical = interaction.options.getBoolean("allow_vertical") || false;
 
-        if (audio === null || image === null || title === null) {
-            await respond(interaction, { content: "You must provide both an audio and image file, and a title", ephemeral: true });
+        if (!audio || !image || !title || !genre) {
+            await respond(interaction, { content: "You must provide both an audio and image file, a title, and a genre", ephemeral: true });
             return;
         }
 
@@ -345,7 +390,7 @@ const command: Command = {
             // Upload the video to YouTube
             let urls: { youtubeUrl: string, soundcloudUrl: string } | undefined = undefined;
             try {
-                urls = await uploadToYoutubeAndSoundcloud(interaction, audioPath, imagePath, videoPath, title, description, tags, video ? true : false);
+                urls = await uploadToYoutubeAndSoundcloud(interaction, audioPath, imagePath, videoPath, title, description, genre, tags, video ? true : false);
             } catch (err) {
                 await respond(interaction, {
                     content: `An error occurred while uploading the video\n\`\`\`\n${err}\n\`\`\``,
@@ -368,7 +413,7 @@ const command: Command = {
             formData.set("cover", image.url);
             formData.set("colour", showColour === false ? false : true);
             if (tagsString)
-                formData.set("tags", tagsString);
+                formData.set("tags", `${genre},${tagsString}`);
 
             await fetchHMAC(siteUrl("/api/sounds"), "POST", formData)
                 .then(async () => await respond(interaction, { content: `Uploaded to YouTube: ${urls.youtubeUrl}\nUploaded to SoundCloud: ${urls.soundcloudUrl}` }))

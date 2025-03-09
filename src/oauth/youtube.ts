@@ -108,6 +108,9 @@ class YoutubeClient {
                 },
                 status: {
                     privacyStatus: "public",
+                    selfDeclaredMadeForKids: false,
+                    containsSyntheticMedia: false,
+                    license: "creativeCommon",
                 },
             },
             media: {
@@ -147,6 +150,27 @@ class YoutubeClient {
             });
 
         return video;
+    }
+
+    async updateDescription(url: string, description: string): Promise<void> {
+        if (this.auth == null || this.youtube == null || !this.hasAccessToken)
+            throw new Error("YouTube client not initialized");
+
+        // Should be a link of the format https://www.youtube.com/watch?v=VIDEO_ID
+        const videoID = new URL(url).searchParams.get("v");
+        if (videoID == null)
+            throw new Error("Invalid video URL");
+
+        await this.youtube.videos.update({
+            auth: this.auth,
+            part: ["snippet"],
+            requestBody: {
+                id: videoID,
+                snippet: {
+                    description,
+                },
+            },
+        });
     }
 
     async statusChange(url: string, privacyStatus: "public" | "private"): Promise<void> {
