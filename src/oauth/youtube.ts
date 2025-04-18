@@ -74,7 +74,7 @@ class YoutubeClient {
 
         const url = this.auth.generateAuthUrl({
             access_type: "offline",
-            approval_prompt: "force",
+            prompt: "consent",
             scope: ["https://www.googleapis.com/auth/youtube", "https://www.googleapis.com/auth/youtube.upload"],
         });
         await _sendMessageToOwner(`Click here to authenticate with YouTube: ${url}`);
