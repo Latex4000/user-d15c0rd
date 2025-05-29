@@ -1,4 +1,4 @@
-import { ChatInputCommandInteraction, SlashCommandBuilder, SlashCommandOptionsOnlyBuilder } from "discord.js";
+import { ChatInputCommandInteraction, SlashCommandBuilder, SlashCommandOptionsOnlyBuilder, SlashCommandSubcommandsOnlyBuilder } from "discord.js";
 import action from "./action.js";
 import bsky from "./bsky.js";
 import change from "./change.js";
@@ -15,7 +15,7 @@ import sight from "./sight.js";
 import sound from "./sound.js";
 import word from "./word.js";
 export interface Command {
-    data: SlashCommandBuilder | SlashCommandOptionsOnlyBuilder;
+    data: SlashCommandBuilder | SlashCommandSubcommandsOnlyBuilder | SlashCommandOptionsOnlyBuilder;
     run: (interaction: ChatInputCommandInteraction) => Promise<void>;
 }
 
