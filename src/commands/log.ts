@@ -96,6 +96,7 @@ const subcommandFns: Record<string, (interaction: ChatInputCommandInteraction) =
 const command: Command = {
     data: new SlashCommandBuilder()
         .setName("log")
+        .setDescription("View logs from the bot or web server")
         .addSubcommand((builder) => builder
             .setName("discord-bot")
             .setDescription("Print logs from the Discord bot")
