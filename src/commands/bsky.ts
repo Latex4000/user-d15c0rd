@@ -1,9 +1,8 @@
 import { ChatInputCommandInteraction, InteractionContextType, SlashCommandBuilder } from "discord.js";
 import { Command } from "./index.js";
-import { Member } from "../types/member.js";
+import { Member, memberAliasToHostName } from "../types/member.js";
 import { fetchHMAC } from "../fetch.js";
 import { siteUrl } from "../config.js";
-import { memberAliasToHostName } from "../namecheap.js";
 import confirm from "../confirm.js";
 
 const command: Command = {
