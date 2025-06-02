@@ -9,7 +9,7 @@ import confirm from "../confirm.js";
 const command: Command = {
     data: new SlashCommandBuilder()
         .setName("bsky")
-        .setDescription("Add bsky for your custom DNS as [youralias].nonacademic.net")
+        .setDescription("Add bsky for your custom DNS as [alias].nonacademic.net")
         .addStringOption(option =>
             option.setName("did")
                 .setDescription("Your DID from the bsky dashboard (did:plc:1234 or did=did:plc:1234)")
@@ -20,50 +20,49 @@ const command: Command = {
         ]),
     run: async (interaction: ChatInputCommandInteraction) => {
         await interaction.deferReply();
-        let member: Member | undefined = undefined;
+
+        let member: Member | undefined;
         try {
-            const data: Member[] = await fetchHMAC(siteUrl(`/api/member?id=${interaction.user.id}`), "GET");
+            const data = await fetchHMAC<Member[]>(siteUrl(`/api/member?id=${interaction.user.id}`), "GET");
             if (data.length)
                 member = data[0];
         } catch (e) {
-            await interaction.followUp({ content: `An error occurred while fetching the JSON data\n\`\`\`\n${e}\n\`\`\``, ephemeral: true });
+            await interaction.editReply(`An error occurred while fetching member data\n\`\`\`\n${e}\n\`\`\``);
             console.error(e);
             return;
         }
 
         if (!member) {
-            await interaction.followUp({ content: "You are not in the webring. Run `/join` to join the webring", ephemeral: true });
+            await interaction.editReply("You are not registered on the site. Run `/join` first");
             return;
         }
 
         const subdomain = memberAliasToHostName(member.alias);
         if (!subdomain) {
-            await interaction.followUp({ content: "You do not have a valid alias. Please change your alias to something more suitable with `/change`", ephemeral: true });
+            await interaction.editReply(`Your alias (\`${member.alias}\`) must contain alphanumeric characters to be a valid bsky handle. Please change your alias with \`/change\``);
             return;
         }
 
-        const subdomainCheck = await confirm(interaction, `Are you sure you want to add bsky as \`${subdomain}.nonacademic.net\`?\nIf not, please change your alias with \`/change\``);
+        const subdomainCheck = await confirm(interaction, `Are you sure you want to add \`${subdomain}.nonacademic.net\` as your bsky handle?\nIf not, please change your alias with \`/change\``);
         if (!subdomainCheck) return;
 
-        let did = interaction.options.getString("did")!;
-        // Check if DID is valid format of either did=did:plc:1234 or did:plc:1234
-        if (!did.match(/^(did:plc:|did=did:plc:)\S+$/)) {
-            await interaction.editReply("Invalid DID provided. It must be in the format of `did:plc:1234` or `did=did:plc:1234`");
+        const did = interaction.options.getString("did", true).replace(/^did=/, "");
+        if (!/^did:plc:\S+$/.test(did)) {
+            await interaction.followUp("Invalid DID provided. It must be in the format of `did:plc:1234` or `did=did:plc:1234`");
             return;
         }
-        did = did.replace("did=", "");
 
         try {
             const hosts = await getHosts();
             addAtprotoRecord(hosts, subdomain, did);
             await setHosts(hosts);
         } catch (e) {
-            await interaction.editReply(`An error occurred while fetching the DNS data\n\`\`\`\n${e}\n\`\`\``);
+            await interaction.followUp(`An error occurred while updating DNS records\n\`\`\`\n${e}\n\`\`\``);
             console.error(e);
             return;
         }
-        
-        await interaction.editReply(`bsky should be added as \`${subdomain}.nonacademic.net\`\nIt can take 0 seconds to 24 hours for the DNS to update fully`);
+
+        await interaction.followUp(`You can now use \`${subdomain}.nonacademic.net\` as your bsky handle. It may take a few minutes for bsky to recognize this change`);
     },
 }
 
