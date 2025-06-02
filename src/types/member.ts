@@ -17,7 +17,7 @@ export function memberInfo(member: Member) {
         .setTitle('Member Information')
         .addFields(
             { name: 'Alias', value: member.alias || 'N/A', inline: true },
-            { name: 'Site', value: member.site ? `<${member.site}>${member.addedRingToSite ? `\n<http://${memberAliasHostName}.nonacademic.net>` : ''}` : 'N/A', inline: true },
+            { name: 'Site', value: member.site ? `<${member.site}>${member.addedRingToSite ? `\n<https://${memberAliasHostName}.nonacademic.net>` : ''}` : 'N/A', inline: true },
             { name: `Color for Words (${siteUrl("words")})`, value: member.color || 'N/A' }
         )
         // Check if member.color is a #\d{6} hex code and set the color of the embed, if not check if it is \d{6} and add a # to the beginning, otherwise use the default embed color
