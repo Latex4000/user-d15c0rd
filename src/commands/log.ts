@@ -62,9 +62,7 @@ async function runWebServerSubcommand(interaction: ChatInputCommandInteraction):
             combinedJournals.push(currentCombinedJournal);
         }
     } catch (error) {
-        await interaction.followUp({
-            content: `An error occurred while requesting logs:\n\`\`\`\n${error}\n\`\`\``,
-        });
+        await interaction.editReply(`An error occurred while requesting logs:\n\`\`\`\n${error}\n\`\`\``);
         return;
     }
 
@@ -79,15 +77,13 @@ async function runWebServerSubcommand(interaction: ChatInputCommandInteraction):
         "Grey",
     ] as const;
 
-    for (let i = 0; i < combinedJournals.length; i += 10) {
-        await interaction.followUp({
-            embeds: combinedJournals.slice(i, i + 10).map((journal) => new EmbedBuilder()
-                .setColor(embedPriorityColors[Math.min(7, journal.priority)])
-                .setDescription("```\n" + journal.message + "\n```")
-                .setTimestamp(Number.parseInt(journal.timestamp.slice(0, -3), 10))
-            ),
-        });
-    }
+    await interaction.editReply({
+        embeds: combinedJournals.slice(-10).map((journal) => new EmbedBuilder()
+            .setColor(embedPriorityColors[Math.min(7, journal.priority)])
+            .setDescription("```\n" + journal.message + "\n```")
+            .setTimestamp(Number.parseInt(journal.timestamp.slice(0, -3), 10))
+        ),
+    });
 }
 
 const subcommandFns: Record<string, (interaction: ChatInputCommandInteraction) => Promise<void>> = {
