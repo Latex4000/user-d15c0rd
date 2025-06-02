@@ -3,7 +3,7 @@ import { Command } from "./index.js";
 import { fetchHMAC } from "../fetch.js";
 import { Member, memberInfo } from "../types/member.js";
 import config, { siteUrl } from "../config.js";
-import { addRedirectRecord, getHosts, memberAliasToHostName, setHosts } from "../namecheap.js";
+import { memberAliasToHostName } from "../namecheap.js";
 
 const command: Command = {
     data: new SlashCommandBuilder()
@@ -51,14 +51,11 @@ const command: Command = {
 
                 let err: unknown | undefined = undefined;
                 try {
-                    const hosts = await getHosts();
                     const aliasHostName = memberAliasToHostName(memberRes.alias);
                     if (!aliasHostName) {
                         await interaction.followUp({ content: `You have confirmed your webring membership, but your alias is invalid for DNS records (no redirect is set from \`YOURUSERNAME.nonacademic.net\` to ${member.site!})`, embeds: [memberInfo(memberRes)], ephemeral: true });
                         return;
                     }
-                    addRedirectRecord(hosts, aliasHostName, member.site!);
-                    await setHosts(hosts);
                 } catch (e) {
                     console.error(e);
                     err = e;

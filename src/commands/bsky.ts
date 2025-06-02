@@ -3,7 +3,7 @@ import { Command } from "./index.js";
 import { Member } from "../types/member.js";
 import { fetchHMAC } from "../fetch.js";
 import { siteUrl } from "../config.js";
-import { getHosts, addAtprotoRecord, setHosts, memberAliasToHostName } from "../namecheap.js";
+import { memberAliasToHostName } from "../namecheap.js";
 import confirm from "../confirm.js";
 
 const command: Command = {
@@ -53,9 +53,10 @@ const command: Command = {
         }
 
         try {
-            const hosts = await getHosts();
-            addAtprotoRecord(hosts, subdomain, did);
-            await setHosts(hosts);
+            await fetchHMAC(siteUrl(`/api/atproto-dns`), "PUT", {
+                did,
+                subdomain,
+            });
         } catch (e) {
             await interaction.followUp(`An error occurred while updating DNS records\n\`\`\`\n${e}\n\`\`\``);
             console.error(e);

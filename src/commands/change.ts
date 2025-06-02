@@ -3,13 +3,13 @@ import { Command } from "./index.js";
 import { Member, memberInfo } from "../types/member.js";
 import { fetchHMAC } from "../fetch.js";
 import { siteUrl } from "../config.js";
-import { addRedirectRecord, getHosts, memberAliasToHostName, setHosts } from "../namecheap.js";
+import { memberAliasToHostName } from "../namecheap.js";
 
 const command: Command = {
     data: new SlashCommandBuilder()
         .setName("change")
         .setDescription("Change your alias or site link in the webring")
-        .addStringOption(option => 
+        .addStringOption(option =>
             option
                 .setName("alias")
                 .setDescription("Your online alias for the webring")
@@ -49,7 +49,7 @@ const command: Command = {
             await interaction.followUp({ content: "You are not in the webring. Run `/join` to join the webring", ephemeral: true });
             return;
         }
-        
+
         const alias = interaction.options.getString("alias");
         let site = interaction.options.getString("site");
         let color = interaction.options.getString("color");
@@ -103,10 +103,8 @@ const command: Command = {
                     await interaction.followUp({ content: `You have updated your webring membership`, embeds: [memberInfo(memberRes)], ephemeral: true });
                     return;
                 }
-                
-                try {
-                    let hosts = await getHosts();
 
+                try {
                     const oldAliasHostName = memberAliasToHostName(oldAlias);
                     const newAliasHostName = memberAliasToHostName(memberRes.alias);
                     if (!newAliasHostName) {
@@ -114,23 +112,23 @@ const command: Command = {
                         return;
                     }
 
-                    // See if theres an atproto TXT record and if there's a redirect record
-                    const atprotoIndex = hosts.findIndex(record => record.HostName === `_atproto.${oldAliasHostName}` && record.RecordType === "TXT");
-                    const redirectIndex = hosts.findIndex(record => record.HostName === oldAliasHostName && record.RecordType === "URL");
+                    let atprotoEnabled = false;
 
-                    // If the alias has changed, update the TXT record
-                    if (atprotoIndex !== -1)
-                        hosts[atprotoIndex].HostName = `_atproto.${newAliasHostName}`;
+                    if (oldAliasHostName !== newAliasHostName) {
+                        const did = await fetchHMAC<string | null>(siteUrl(`/api/atproto-dns`), "DELETE", {
+                            subdomain: oldAliasHostName,
+                        });
 
-                    if (redirectIndex !== -1) {
-                        hosts[redirectIndex].HostName = newAliasHostName;
-                        hosts[redirectIndex].Address = member.site!;
-                    } else if (member.site && member.addedRingToSite)
-                        hosts = addRedirectRecord(hosts, newAliasHostName, member.site);
+                        if (did != null) {
+                            await fetchHMAC(siteUrl(`/api/atproto-dns`), "PUT", {
+                                did,
+                                subdomain: newAliasHostName,
+                            });
+                            atprotoEnabled = true;
+                        }
+                    }
 
-                    await setHosts(hosts);
-
-                    await interaction.followUp({ content: `You have updated your webring membership and your DNS records (allow ~30 minutes for them to be accepted by the internet)\n${atprotoIndex !== -1 ? `Updated ${oldAliasHostName}.nonacademic.net to ${newAliasHostName}.nonacademic.net for bsky\n` : ""}${redirectIndex !== -1 ? `Updated ${oldAliasHostName}.nonacademic.net to ${newAliasHostName}.nonacademic.net for your site redirect\n` : site && member.addedRingToSite ? `Added ${newAliasHostName}.nonacademic.net for your site redirect\n` : ""}`, embeds: [memberInfo(memberRes)], ephemeral: true });
+                    await interaction.followUp({ content: `You have updated your webring membership and your DNS records (allow ~30 minutes for them to be accepted by the internet)\n${atprotoEnabled ? `Updated bsky handle to \`${newAliasHostName}.nonacademic.net\`\n` : ""}${site && member.addedRingToSite ? `Updated site redirect to \`${newAliasHostName}.nonacademic.net\`\n` : ""}`, embeds: [memberInfo(memberRes)], ephemeral: true });
                 } catch (e) {
                     await interaction.editReply(`An error occurred while fetching the DNS data\n\`\`\`\n${e}\n\`\`\``);
                     console.error(e);
