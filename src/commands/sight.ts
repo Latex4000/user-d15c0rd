@@ -118,7 +118,7 @@ const command: Command = {
         // Send form data to the server
         await fetchHMAC<Sight>(siteUrl("/api/sights"), "POST", formData)
             .then(async sight => {
-                discordClient.channels.fetch(config.discord.feed)
+                discordClient.channels.fetch(config.discord.feed_channel_id)
                     .then(async channel => {
                         if (channel?.isSendable())
                             await channel.send({ content: `<@${interaction.user.id}> uploaded a sight\n**Link:** ${config.collective.site_url}/sights` });

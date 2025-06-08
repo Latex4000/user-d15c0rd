@@ -105,8 +105,8 @@ async function uploadToYoutubeAndSoundcloud(
             return;
         }
 
-    // Send to the config.discord.feed channel too
-    discordClient.channels.fetch(config.discord.feed)
+    // Send to the feed channel too
+    discordClient.channels.fetch(config.discord.feed_channel_id)
         .then(async channel => {
             if (channel?.isSendable())
                 await channel.send({ content: `<@${interaction.user.id}> uploaded a sound\nTitle: ${title}\nYouTube: ${youtubeUrl}\nSoundCloud: ${soundcloudUrl}` });

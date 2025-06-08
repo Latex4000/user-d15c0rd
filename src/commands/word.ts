@@ -131,7 +131,7 @@ const command: Command = {
         // Send form data to the server
         await fetchHMAC<Word>(siteUrl("/api/words"), "POST", formData)
             .then(async word => {
-                discordClient.channels.fetch(config.discord.feed)
+                discordClient.channels.fetch(config.discord.feed_channel_id)
                     .then(async channel => {
                         if (channel?.isSendable())
                             await channel.send({ content: `<@${interaction.user.id}> uploaded a word\n**Link:** ${config.collective.site_url}/words/${Math.floor(new Date(word.date).getTime() / 1000).toString(10)}` });

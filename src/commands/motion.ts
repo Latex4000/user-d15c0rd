@@ -158,8 +158,8 @@ const command: Command = {
             }
             const youtubeUrl = `https://www.youtube.com/watch?v=${ytData.id}`;
 
-            // Send to the config.discord.feed channel too
-            discordClient.channels.fetch(config.discord.feed)
+            // Send to the feed channel too
+            discordClient.channels.fetch(config.discord.feed_channel_id)
                 .then(async channel => {
                     if (channel?.isSendable())
                         await channel.send({ content: `<@${interaction.user.id}> uploaded a motion\nTitle: ${title}\nYouTube: ${youtubeUrl}` });
