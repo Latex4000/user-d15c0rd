@@ -9,7 +9,10 @@
         "client_id": "",
         "token": "",
         "owner_id": "",
-        "feed_channel_id": ""
+        "feed_channel_id": "",
+        "collective_channel_id": "",
+        "admin_ids": [""],
+        "guild_id": ""
     },
     "namecheap": {
         "username": "",

@@ -1,4 +1,4 @@
-import { AttachmentPayload, ChatInputCommandInteraction, Client, DiscordAPIError, GatewayIntentBits, Message, REST, Routes } from "discord.js";
+import { ApplicationCommandPermissionType, AttachmentPayload, ChatInputCommandInteraction, Client, DiscordAPIError, GatewayIntentBits, REST, RESTGetAPIApplicationCommandsResult, RESTPutAPIApplicationCommandPermissionsJSONBody, RESTPutAPIApplicationCommandsJSONBody, Routes } from "discord.js";
 import { commands } from "./commands/index.js";
 import youtubeClient from "./oauth/youtube.js";
 import config from "./config.js";
@@ -6,12 +6,34 @@ import config from "./config.js";
 const rest = new REST({ version: "10" }).setToken(config.discord.token);
 
 console.log("Started refreshing slash (/) commands.");
-await rest.put(
+const createdCommands = await rest.put(
     Routes.applicationCommands(config.discord.client_id),
-    { body: commands.map(c => c.data) },
-)
-    .then(() => console.log(`Successfully refreshed slash (/) commands`))
-    .catch((error) => console.error("An error has occurred in refreshing slash (/) commands", error));
+    { body: commands.map(c => c.data.toJSON()) satisfies RESTPutAPIApplicationCommandsJSONBody },
+) as RESTGetAPIApplicationCommandsResult;
+console.log(`Successfully refreshed slash (/) commands`);
+
+// // Note: Server admins can override these permissions, so it's just for display
+// const updateandrestartCommand = createdCommands.find((c) => c.name === "update-and-restart");
+// if (updateandrestartCommand == null) {
+//     throw new Error("API didn't return update-and-restart command");
+// }
+
+// console.log("Setting permissions on update-and-restart command");
+// for (const adminId of config.discord.admin_ids) {
+//     await rest.put(
+//         Routes.applicationCommandPermissions(config.discord.client_id, config.discord.guild_id, updateandrestartCommand.id),
+//         {
+//             body: {
+//                 permissions: [{
+//                     id: adminId,
+//                     permission: true,
+//                     type: ApplicationCommandPermissionType.User,
+//                 }],
+//             } satisfies RESTPutAPIApplicationCommandPermissionsJSONBody,
+//         },
+//     );
+// }
+// console.log("Successfully set permissions on update-and-restart command");
 
 const discordClient = new Client({
     intents: [
@@ -26,6 +48,15 @@ discordClient.on("ready", async (discordClient) => {
         const owner = await discordClient.users.fetch(config.discord.owner_id);
         await youtubeClient.getAccessToken((message) => owner.send(message))
     }
+
+    await discordClient.channels.fetch(config.discord.collective_channel_id)
+        .then(async channel => {
+            if (channel?.isSendable())
+                await channel.send("Gm");
+            else
+                console.error("Failed to send Gm: Channel is not sendable");
+        })
+        .catch(err => console.error("Failed to send Gm", err));
 });
 
 discordClient.on("interactionCreate", async (interaction) => {
@@ -42,7 +73,7 @@ discordClient.on("interactionCreate", async (interaction) => {
     } catch (err) {
         if (!err)
             return;
-        
+
         console.error(err);
 
         if (!(err instanceof DiscordAPIError))
@@ -55,7 +86,7 @@ discordClient.on("interactionCreate", async (interaction) => {
         } else {
             await respond(interaction, { content: `The command was unable to be fulfilled.\nA discord error (code \`${err.code}\`) was received:\n\`\`\`\n${err.message}\n\`\`\`` });
         }
-    }   
+    }
 });
 
 export async function respond (interaction: ChatInputCommandInteraction, messageData: { content?: string, files?: AttachmentPayload[], ephemeral?: boolean }) {

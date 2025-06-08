@@ -13,6 +13,7 @@ import ping from "./ping.js";
 import restore from "./restore.js";
 import sight from "./sight.js";
 import sound from "./sound.js";
+import updateandrestart from "./updateandrestart.js";
 import word from "./word.js";
 export interface Command {
     data: SlashCommandBuilder | SlashCommandSubcommandsOnlyBuilder | SlashCommandOptionsOnlyBuilder;
@@ -35,6 +36,7 @@ commands.push(ping);
 commands.push(restore);
 commands.push(sight);
 commands.push(sound);
+commands.push(updateandrestart);
 commands.push(word);
 
 export { commands };
