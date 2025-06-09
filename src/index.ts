@@ -1,4 +1,4 @@
-import { ApplicationCommandPermissionType, AttachmentPayload, ChatInputCommandInteraction, Client, DiscordAPIError, GatewayIntentBits, REST, RESTGetAPIApplicationCommandsResult, RESTPutAPIApplicationCommandPermissionsJSONBody, RESTPutAPIApplicationCommandsJSONBody, Routes } from "discord.js";
+import { AttachmentPayload, ChatInputCommandInteraction, Client, DiscordAPIError, GatewayIntentBits, REST, RESTPutAPIApplicationCommandsJSONBody, Routes } from "discord.js";
 import { commands } from "./commands/index.js";
 import youtubeClient from "./oauth/youtube.js";
 import config from "./config.js";
@@ -6,34 +6,11 @@ import config from "./config.js";
 const rest = new REST({ version: "10" }).setToken(config.discord.token);
 
 console.log("Started refreshing slash (/) commands.");
-const createdCommands = await rest.put(
+await rest.put(
     Routes.applicationCommands(config.discord.client_id),
     { body: commands.map(c => c.data.toJSON()) satisfies RESTPutAPIApplicationCommandsJSONBody },
-) as RESTGetAPIApplicationCommandsResult;
+);
 console.log(`Successfully refreshed slash (/) commands`);
-
-// // Note: Server admins can override these permissions, so it's just for display
-// const updateandrestartCommand = createdCommands.find((c) => c.name === "update-and-restart");
-// if (updateandrestartCommand == null) {
-//     throw new Error("API didn't return update-and-restart command");
-// }
-
-// console.log("Setting permissions on update-and-restart command");
-// for (const adminId of config.discord.admin_ids) {
-//     await rest.put(
-//         Routes.applicationCommandPermissions(config.discord.client_id, config.discord.guild_id, updateandrestartCommand.id),
-//         {
-//             body: {
-//                 permissions: [{
-//                     id: adminId,
-//                     permission: true,
-//                     type: ApplicationCommandPermissionType.User,
-//                 }],
-//             } satisfies RESTPutAPIApplicationCommandPermissionsJSONBody,
-//         },
-//     );
-// }
-// console.log("Successfully set permissions on update-and-restart command");
 
 const discordClient = new Client({
     intents: [
