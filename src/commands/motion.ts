@@ -49,8 +49,8 @@ const command: Command = {
         )
         .addBooleanOption(option =>
             option
-                .setName("show_colour")
-                .setDescription("Show your colour on site (default: true")
+                .setName("hide_colour")
+                .setDescription("Hide your colour on the site for this motion")
                 .setRequired(false)
         )
         .addBooleanOption(option =>
@@ -73,7 +73,7 @@ const command: Command = {
         const tagsString = interaction.options.getString("tags") ?? "";
         const tags = tagsString.length === 0 ? [] : tagsString.split(",").map((tag) => tag.trim());
         const thumbnail = interaction.options.getAttachment("thumbnail");
-        const showColour = interaction.options.getBoolean("show_colour");
+        const hideColour = interaction.options.getBoolean("hide_colour") ?? false;
 
         if (video === null || title === null) {
             await respond(interaction, { content: "You must provide both a video file, and a title", ephemeral: true });
@@ -163,7 +163,7 @@ const command: Command = {
                 title,
                 youtubeUrl,
                 memberDiscord: interaction.user.id,
-                showColour: showColour === false ? false : true,
+                showColour: !hideColour,
                 date: new Date(),
                 tags,
             }
