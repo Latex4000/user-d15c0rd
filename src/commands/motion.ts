@@ -2,7 +2,6 @@ import { ChatInputCommandInteraction, InteractionContextType, SlashCommandBuilde
 import { Command } from "./index.js";
 import { mkdir, unlink, writeFile } from "node:fs/promises";
 import { discordClient, respond } from "../index.js";
-import { exec } from "node:child_process";
 import { createHash } from "node:crypto";
 import { fetchHMAC } from "../fetch.js";
 import youtubeClient from "../oauth/youtube.js";
@@ -10,6 +9,7 @@ import { extname } from "node:path";
 import config, { siteUrl } from "../config.js";
 import confirm from "../confirm.js";
 import { Motion } from "../types/motion.js";
+import { checkVideoForYoutube } from "../video.js";
 
 const validExtensions = [".mp4", ".mov", ".mkv", ".avi", ".wmv"];
 
@@ -53,6 +53,12 @@ const command: Command = {
                 .setDescription("Show your colour on site (default: true")
                 .setRequired(false)
         )
+        .addBooleanOption(option =>
+            option
+                .setName("allow_youtube_shorts")
+                .setDescription("Allow this motion to be uploaded as a YouTube Short")
+                .setRequired(false),
+        )
         .setContexts([
             InteractionContextType.BotDM,
             InteractionContextType.Guild,
@@ -91,39 +97,24 @@ const command: Command = {
             await fetch(video.url)
                 .then(async response => writeFile(videoPath, Buffer.from(await response.arrayBuffer())));
 
-            // Run ffprobe to check the video file
             try {
-                await new Promise<void>((resolve, reject) => {
-                    exec(`ffprobe -v error -show_entries format=filename,format_name,duration -show_entries stream=index,codec_name,codec_type,width,height,r_frame_rate -of default=noprint_wrappers=1 ${videoPath}`, async (err, stdout, stderr) => {
-                        if (err)
-                            return reject(err);
-
-                        // Check if the container and codec are suitable, and if there is audio (and only one audio stream)
-                        const lines = stdout.split("\n");
-                        let videoStream = false;
-                        let videoStreams = 0;
-                        let audioStreams = 0;
-                        for (const line of lines) {
-                            if (line.startsWith("codec_name="))
-                                if (!["h264", "aac", "mp3"].includes(line.split("=")[1]))
-                                    return reject(`The video file must be h264 video and aac/mp3 audio\nSee result below:\n\n${stdout}`);
-
-                            if (line.startsWith("codec_type=video")) {
-                                videoStream = true;
-                                videoStreams++;
-                            } else if (line.startsWith("codec_type=audio"))
-                                audioStreams++;
-                        }
-                        if (!videoStream || videoStreams !== 1 || audioStreams !== 1)
-                            return reject("The video file must have exactly one video stream and less than two audio streams");
-
-                        resolve();
-                    });
+                const errors = await checkVideoForYoutube(videoPath, {
+                    allowYoutubeShorts: interaction.options.getBoolean("allow_youtube_shorts") ?? false,
+                    requireAudio: false,
                 });
-            } catch (err) {
+
+                if (errors.length > 0) {
+                    await respond(interaction, {
+                        content: `Invalid video format for YouTube:\n${errors.map((error) => "- " + error).join("\n")}`,
+                        ephemeral: true,
+                    });
+                    await unlink(videoPath);
+                    return;
+                }
+            } catch (error) {
                 await respond(interaction, {
-                    content: `An error occurred while checking the video file\n\`\`\`\n${err}\n\`\`\``,
-                    ephemeral: true
+                    content: `Error getting video format info:\n\`\`\`\n${error}\n\`\`\``,
+                    ephemeral: true,
                 });
                 await unlink(videoPath);
                 return;

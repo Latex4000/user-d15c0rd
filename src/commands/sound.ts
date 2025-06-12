@@ -10,6 +10,7 @@ import youtubeClient from "../oauth/youtube.js";
 import { extname } from "node:path";
 import config, { canUseSoundcloud, canUseYoutube, siteUrl } from "../config.js";
 import confirm from "../confirm.js";
+import { renderStillVideoForYoutube } from "../video.js";
 
 const verticalAspectRatioThresh = 1.34;
 const validExtensions = [".mp4", ".mov", ".mkv", ".avi", ".wmv"];
@@ -378,16 +379,11 @@ const command: Command = {
 
         try {
             if (canUseYoutube && !video) {
-                // Run ffmpeg to create a video file
                 const waitMessage = await interaction.channel.send("Creating the video...");
-                await new Promise<void>((resolve, reject) => {
-                    exec(`ffmpeg -loop 1 -i "${imagePath}" -i "${audioPath}" -vf "scale='min(1920, floor(iw/2)*2)':-2,format=yuv420p" -c:v libx264 -preset medium -profile:v main -c:a aac -shortest -movflags +faststart ${videoPath}`, async (err, stdout, stderr) => {
-                        await waitMessage.delete();
-                        if (err)
-                            return reject(err);
-                        resolve();
-                    });
-                });
+
+                await renderStillVideoForYoutube(imagePath, audioPath, videoPath);
+
+                await waitMessage.delete();
             }
 
             // Upload the video to YouTube
