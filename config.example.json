@@ -14,6 +14,10 @@
         "admin_ids": [""],
         "guild_id": ""
     },
+    "http": {
+        "port": 0,
+        "ssh_tunnel_host": ""
+    },
     "namecheap": {
         "username": "",
         "key": "",

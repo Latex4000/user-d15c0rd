@@ -29,9 +29,10 @@ if (
 	!config.discord.collective_channel_id ||
 	!Array.isArray(config.discord.admin_ids) ||
 	config.discord.admin_ids.some((id) => !id) ||
-	!config.discord.guild_id
+	!config.discord.guild_id ||
+	config.http.port < 1024
 ) {
-	console.error("Invalid required config (secret_hmac, collective, discord)");
+	console.error("Invalid required config (secret_hmac, collective, discord, http)");
 	process.exit(1);
 }
 

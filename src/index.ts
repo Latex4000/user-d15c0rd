@@ -1,3 +1,5 @@
+import { spawn } from "node:child_process";
+import { createServer } from "node:http";
 import { AttachmentPayload, ChatInputCommandInteraction, Client, DiscordAPIError, GatewayIntentBits, REST, RESTPutAPIApplicationCommandsJSONBody, Routes } from "discord.js";
 import { commands } from "./commands/index.js";
 import youtubeClient from "./oauth/youtube.js";
@@ -12,7 +14,7 @@ await rest.put(
 );
 console.log(`Successfully refreshed slash (/) commands`);
 
-const discordClient = new Client({
+export const discordClient = new Client({
     intents: [
         GatewayIntentBits.Guilds,
     ],
@@ -81,4 +83,30 @@ export async function respond (interaction: ChatInputCommandInteraction, message
 
 await discordClient.login(config.discord.token);
 
-export { discordClient };
+const httpServer = createServer((request, response) => {
+    response.writeHead(404);
+    response.end();
+});
+httpServer.listen(config.http.port, "localhost");
+
+// Forward connections from the server to local http server
+const autossh = !config.http.ssh_tunnel_host ? null : spawn("autossh", [
+    // autossh options
+    "-M", "0",
+    // ssh options
+    "-N",
+    "-o", "ExitOnForwardFailure yes",
+    "-o", "ServerAliveCountMax 3",
+    "-o", "ServerAliveInterval 15",
+    "-R", `localhost:5556:localhost:${config.http.port}`,
+    config.http.ssh_tunnel_host,
+], { stdio: "ignore" });
+
+export async function shutdown() {
+    if (autossh != null && !autossh.kill()) {
+        autossh.kill("SIGKILL");
+    }
+
+    await new Promise((resolve) => httpServer.close(resolve));
+    await discordClient.destroy();
+}

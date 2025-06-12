@@ -2,7 +2,7 @@ import { ChatInputCommandInteraction, InteractionContextType, MessageFlags, Slas
 import { Command } from "./index.js";
 import config from "../config.js";
 import { execFileSync, spawn } from "node:child_process";
-import { discordClient } from "../index.js";
+import { shutdown } from "../index.js";
 
 const command: Command = {
     data: new SlashCommandBuilder()
@@ -48,7 +48,7 @@ const command: Command = {
 
         await interaction.editReply(stop ? "Stopping!" : "Restarting!");
 
-        await discordClient.destroy();
+        await shutdown();
 
         // Wait a little bit just in case rate limits could be an issue idk
         await new Promise((resolve) => setTimeout(resolve, 2000));
