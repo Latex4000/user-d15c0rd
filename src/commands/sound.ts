@@ -198,9 +198,9 @@ const command: Command = {
         )
         .addBooleanOption(option =>
             option
-                .setName("show_colour")
-                .setDescription("Show your colour on site (default: true")
-                .setRequired(false)
+                .setName("hide_colour")
+                .setDescription("Hide your colour on the site for this sound")
+                .setRequired(false),
         )
         .addBooleanOption(option =>
             option
@@ -230,7 +230,7 @@ const command: Command = {
         const description = interaction.options.getString("description") || "";
         const tagsString = interaction.options.getString("tags") ?? "";
         const tags = tagsString.length === 0 ? [] : tagsString.split(",").map((tag) => tag.trim());
-        const showColour = interaction.options.getBoolean("show_colour");
+        const hideColour = interaction.options.getBoolean("hide_colour") ?? false;
         const allowVertical = interaction.options.getBoolean("allow_vertical") || false;
 
         if (!audio || !image || !title || !genre) {
@@ -410,7 +410,7 @@ const command: Command = {
             formData.set("youtubeUrl", urls.youtubeUrl);
             formData.set("track", audio.url);
             formData.set("cover", image.url);
-            formData.set("colour", showColour === false ? false : true);
+            formData.set("colour", !hideColour);
             if (tagsString)
                 formData.set("tags", `${genre},${tagsString}`);
 

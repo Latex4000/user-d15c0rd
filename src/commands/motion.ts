@@ -51,7 +51,7 @@ const motion: Command = {
             option
                 .setName("hide_colour")
                 .setDescription("Hide your colour on the site for this motion")
-                .setRequired(false)
+                .setRequired(false),
         )
         .addBooleanOption(option =>
             option

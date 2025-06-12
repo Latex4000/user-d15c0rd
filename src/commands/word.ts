@@ -37,9 +37,9 @@ const command: Command = {
         )
         .addBooleanOption(option =>
             option
-                .setName("show_colour")
-                .setDescription("Show your colour on site (default: true")
-                .setRequired(false)
+                .setName("hide_colour")
+                .setDescription("Hide your colour on the site for this word")
+                .setRequired(false),
         )
         .setContexts([
             InteractionContextType.BotDM,
@@ -54,7 +54,7 @@ const command: Command = {
 
         const title = interaction.options.getString("title");
         const tags = interaction.options.getString("tags");
-        const showColour = interaction.options.getBoolean("show_colour");
+        const hideColour = interaction.options.getBoolean("hide_colour") ?? false;
 
         // Check for missing required options
         if (!attachment || !title) {
@@ -97,7 +97,7 @@ const command: Command = {
         formData.set("discord", interaction.user.id);
         formData.set("title", title);
         formData.set("md", content);
-        formData.set("colour", showColour === false ? false : true);
+        formData.set("colour", !hideColour);
         if (tags)
             formData.set("tags", tags);
 

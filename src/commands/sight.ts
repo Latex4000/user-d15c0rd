@@ -43,9 +43,9 @@ const command: Command = {
         )
         .addBooleanOption(option =>
             option
-                .setName("show_colour")
-                .setDescription("Show your colour on site (default: true")
-                .setRequired(false)
+                .setName("hide_colour")
+                .setDescription("Hide your colour on the site for this sight")
+                .setRequired(false),
         )
         .setContexts([
             InteractionContextType.BotDM,
@@ -60,7 +60,7 @@ const command: Command = {
         const description = interaction.options.getString("description");
         const tags = interaction.options.getString("tags");
         const pixelated = interaction.options.getBoolean("is_pixel_art");
-        const showColour = interaction.options.getBoolean("show_colour");
+        const hideColour = interaction.options.getBoolean("hide_colour") ?? false;
 
         // Check for missing required options
         if (!images || !title || !description) {
@@ -77,7 +77,7 @@ const command: Command = {
         formData.set("title", title);
         formData.set("description", description);
         formData.set("pixelated", pixelated ? true : false);
-        formData.set("colour", showColour === false ? false : true);
+        formData.set("colour", !hideColour);
         if (tags)
             formData.set("tags", tags);
 
