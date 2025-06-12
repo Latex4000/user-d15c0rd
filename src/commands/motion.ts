@@ -13,7 +13,7 @@ import { checkVideoForYoutube } from "../video.js";
 
 const validExtensions = [".mp4", ".mov", ".mkv", ".avi", ".wmv"];
 
-const command: Command = {
+const motion: Command = {
     data: new SlashCommandBuilder()
         .setName("motion")
         .setDescription("Upload a motion u made to the webring")
@@ -189,4 +189,4 @@ const command: Command = {
     },
 }
 
-export default command;
+export default motion;
