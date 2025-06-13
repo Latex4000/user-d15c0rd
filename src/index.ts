@@ -4,6 +4,7 @@ import { AttachmentPayload, ChatInputCommandInteraction, Client, DiscordAPIError
 import { commands } from "./commands/index.js";
 import youtubeClient from "./oauth/youtube.js";
 import config from "./config.js";
+import DiscordInteractionError from "./DiscordInteractionError.js";
 
 const rest = new REST({ version: "10" }).setToken(config.discord.token);
 
@@ -52,6 +53,11 @@ discordClient.on("interactionCreate", async (interaction) => {
     } catch (err) {
         if (!err)
             return;
+
+        if (err instanceof DiscordInteractionError) {
+            await err.send(interaction);
+            return;
+        }
 
         console.error(err);
 
