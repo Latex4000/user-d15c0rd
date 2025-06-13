@@ -204,9 +204,9 @@ const command: Command = {
         )
         .addBooleanOption(option =>
             option
-                .setName("allow_vertical")
-                .setDescription("Allow vertical/square image (may be uploaded as a short)")
-                .setRequired(false)
+                .setName("allow_youtube_shorts")
+                .setDescription("Allow this sound to be uploaded as a YouTube Short")
+                .setRequired(false),
         )
         .setContexts([
             InteractionContextType.BotDM,
@@ -231,7 +231,7 @@ const command: Command = {
         const tagsString = interaction.options.getString("tags") ?? "";
         const tags = tagsString.length === 0 ? [] : tagsString.split(",").map((tag) => tag.trim());
         const hideColour = interaction.options.getBoolean("hide_colour") ?? false;
-        const allowVertical = interaction.options.getBoolean("allow_vertical") || false;
+        const allowVertical = interaction.options.getBoolean("allow_youtube_shorts") ?? false;
 
         if (!audio || !image || !title || !genre) {
             await respond(interaction, { content: "You must provide both an audio and image file, a title, and a genre", ephemeral: true });
