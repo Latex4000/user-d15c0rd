@@ -387,7 +387,7 @@ const command: Command = {
             }
 
             // Upload the video to YouTube
-            let urls: { youtubeUrl: string, soundcloudUrl: string } | undefined = undefined;
+            let urls: { youtubeUrl: string, soundcloudUrl: string } | undefined;
             try {
                 urls = await uploadToYoutubeAndSoundcloud(interaction, audioPath, imagePath, videoPath, title, description, genre, tags, video ? true : false);
             } catch (err) {
@@ -395,6 +395,7 @@ const command: Command = {
                     content: `An error occurred while uploading the video\n\`\`\`\n${err}\n\`\`\``,
                     ephemeral: true
                 });
+                await deleteTemporaryFiles();
                 return;
             }
 
