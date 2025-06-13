@@ -129,22 +129,22 @@ async function checkImageAspectRatio(imagePath: string): Promise<{ isHorizontal:
             if (err) {
                 return reject(err);
             }
-            
+
             const dimensions = stdout.trim().split('x');
             if (dimensions.length !== 2) {
                 return reject(new Error('Failed to get image dimensions'));
             }
-            
+
             const width = parseInt(dimensions[0]);
             const height = parseInt(dimensions[1]);
-            
+
             if (isNaN(width) || isNaN(height)) {
                 return reject(new Error('Invalid image dimensions'));
             }
-            
+
             // Consider the image horizontal if the aspect ratio is greater than threshold
             const isHorizontal = width / height >= verticalAspectRatioThresh;
-            
+
             resolve({isHorizontal, width, height});
         });
     });
@@ -259,20 +259,20 @@ const command: Command = {
 
         try {
             const { isHorizontal, width, height } = await checkImageAspectRatio(imagePath);
-            
+
             if (!isHorizontal && !allowVertical) {
-                await respond(interaction, { 
-                    content: `Your image has a vertical/square aspect ratio (**${width}x${height}**; aspect ratio: **${(width / height).toFixed(2)}**; aspect ratio threshold: **${verticalAspectRatioThresh}**).\nThis may be uploaded as a short on YouTube, which you probably don't want **especially if your content contains copyright material, as it will be fully blocked by YouTube if it is a short**.\nIf you want to continue anyway, please use the \`allow_vertical\` option or provide a horizontal image.`, 
-                    ephemeral: true 
+                await respond(interaction, {
+                    content: `Your image has a vertical/square aspect ratio (**${width}x${height}**; aspect ratio: **${(width / height).toFixed(2)}**; aspect ratio threshold: **${verticalAspectRatioThresh}**).\nThis may be uploaded as a short on YouTube, which you probably don't want **especially if your content contains copyright material, as it will be fully blocked by YouTube if it is a short**.\nIf you want to continue anyway, please use the \`allow_vertical\` option or provide a horizontal image.`,
+                    ephemeral: true
                 });
                 await unlink(imagePath);
                 return;
             }
         } catch (err) {
             console.error("Failed to check image aspect ratio", err);
-            await respond(interaction, { 
-                content: `Failed to check image aspect ratio. Please ensure your image is horizontal.\n\`\`\`\n${err}\n\`\`\``, 
-                ephemeral: true 
+            await respond(interaction, {
+                content: `Failed to check image aspect ratio. Please ensure your image is horizontal.\n\`\`\`\n${err}\n\`\`\``,
+                ephemeral: true
             });
             await unlink(imagePath);
             return;
