@@ -100,7 +100,7 @@ const autossh = !config.http.ssh_tunnel_host ? null : spawn("autossh", [
     "-o", "ServerAliveInterval 15",
     "-R", `localhost:5556:localhost:${config.http.port}`,
     config.http.ssh_tunnel_host,
-], { stdio: "ignore" });
+], { stdio: ["ignore", "ignore", "inherit"] });
 
 export async function shutdown() {
     if (autossh != null && !autossh.kill()) {
