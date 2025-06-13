@@ -50,10 +50,10 @@ const command: Command = {
 
         await shutdown();
 
-        // Wait a little bit just in case rate limits could be an issue idk
-        await new Promise((resolve) => setTimeout(resolve, 2000));
-
         if (!stop && process.env.NODE_ENV !== "development") {
+            // Wait a little bit just in case rate limits could be an issue idk
+            await new Promise((resolve) => setTimeout(resolve, 2000));
+
             // Start new detached process but keep IO on the same terminal
             spawn("npm", ["run", "start"], {
                 detached: true,
