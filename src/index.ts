@@ -1,7 +1,7 @@
 import { spawn } from "node:child_process";
 import { createServer } from "node:http";
 import { format } from "node:util";
-import { AttachmentPayload, ChatInputCommandInteraction, Client, DiscordAPIError, GatewayIntentBits, Message, MessageCreateOptions, messageLink, REST, RESTPutAPIApplicationCommandsJSONBody, Routes } from "discord.js";
+import { ChatInputCommandInteraction, Client, DiscordAPIError, GatewayIntentBits, InteractionReplyOptions, InteractionResponse, Message, MessageCreateOptions, messageLink, REST, RESTPutAPIApplicationCommandsJSONBody, Routes } from "discord.js";
 import { commands } from "./commands/index.js";
 import youtubeClient from "./oauth/youtube.js";
 import config from "./config.js";
@@ -133,17 +133,22 @@ discordClient.on("interactionCreate", async (interaction) => {
     }
 });
 
-export async function respond (interaction: ChatInputCommandInteraction, messageData: { content?: string, files?: AttachmentPayload[], ephemeral?: boolean }) {
-    // Send content as file if larger than 2000 characters
-    if (messageData.content && messageData.content.length > 2000) {
-        messageData.files = [...(messageData.files || []), { attachment: Buffer.from(messageData.content), name: "message.txt" }];
-        messageData.content = "Message too long; sending as file";
+export async function respond(interaction: ChatInputCommandInteraction, options: InteractionReplyOptions | string): Promise<InteractionResponse | Message> {
+    if (typeof options === "string") {
+        options = { content: options };
     }
 
-    if (interaction.replied || interaction.deferred)
-        return interaction.editReply(messageData);
-    else
-        return interaction.reply(messageData);
+    if (options.content != null && options.content.length > 2000) {
+        options.files = [
+            ...(options.files ?? []),
+            { attachment: options.content, name: "message.txt" },
+        ];
+        delete options.content;
+    }
+
+    return interaction.replied || interaction.deferred
+        ? interaction.editReply(options)
+        : interaction.reply(options);
 }
 
 await discordClient.login(config.discord.token);
