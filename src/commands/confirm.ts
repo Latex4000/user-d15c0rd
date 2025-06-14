@@ -13,22 +13,14 @@ const command: Command = {
         ]),
     run: async (interaction: ChatInputCommandInteraction) => {
         await interaction.deferReply();
-        // Get JSON Data
-        let member: Member | undefined = undefined;
-        try {
-            const data: Member[] = await fetchHMAC(siteUrl(`/api/member?id=${interaction.user.id}`), "GET");
-            if (data.length)
-                member = data[0];
-        } catch (e) {
-            await interaction.followUp({ content: `An error occurred while fetching the JSON data\n\`\`\`\n${e}\n\`\`\``, ephemeral: true });
-            console.error(e);
-            return;
-        }
 
-        if (!member) {
+        const data: Member[] = await fetchHMAC(siteUrl(`/api/member?id=${interaction.user.id}`), "GET");
+        if (!data.length) {
             await interaction.followUp({ content: "You are not in the webring. Run `/join` to join the webring", ephemeral: true });
             return;
         }
+
+        const member = data[0];
 
         if (!member.site) {
             await interaction.followUp({ content: "You have not added your site URL. Run `/change` to add your site URL", ephemeral: true });
@@ -61,8 +53,7 @@ const command: Command = {
                 }
 
                 await interaction.followUp({ content: `You have confirmed your webring membership ${!err ? `and added the redirect from \`${memberAliasToHostName(memberRes.alias)}.nonacademic.net\` to ${member.site!}\nallow ~30 minutes for the redirect to be accepted by the internet` : `but an error occurred while adding the redirect to DNS records <@${config.discord.owner_id}>\n\`\`\`\n${err}\n\`\`\``}`, embeds: [memberInfo(memberRes)], ephemeral: true });
-            })
-            .catch(async (err) => await interaction.followUp({ content: "An error occurred while confirming your webring membership\n\`\`\`\n" + err + "\n\`\`\`", ephemeral: true }));
+            });
     },
 }
 

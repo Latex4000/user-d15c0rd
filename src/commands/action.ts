@@ -36,15 +36,13 @@ const command: Command = {
         ]),
     run: async (interaction: ChatInputCommandInteraction) => {
         await interaction.deferReply();
-        
+
         const link = interaction.options.getString("link")!;
         const isRSS = interaction.options.getBoolean("is_rss")!;
         let title = interaction.options.getString("title");
         let description = interaction.options.getString("description");
 
-        try {
-            new URL(link);
-        } catch {
+        if (!URL.canParse(link)) {
             await interaction.editReply("Invalid URL provided");
             return;
         }
@@ -110,8 +108,7 @@ const command: Command = {
                 if (!res)
                     throw new Error("Failed to add action");
                 await interaction.editReply(`Added\nshuold be visible on the site at ${siteUrl("/actions")}`);
-            })
-            .catch(async (err) => await interaction.editReply(`An error occurred while adding action\n\`\`\`\n${err}\n\`\`\``));
+            });
 
     },
 }

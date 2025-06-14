@@ -69,13 +69,7 @@ const command: Command = {
         }
 
         // Get file content
-        let content: string;
-        try {
-            content = await fetch(attachment.url).then(res => res.text());
-        } catch (e) {
-            await interaction.followUp({ content: `An error occurred while fetching the md/txt file\n\`\`\`\n${e}\n\`\`\``, ephemeral: true });
-            return;
-        }
+        const content = await fetch(attachment.url).then(res => res.text());
 
         // Check if the assets file is a zip file
         if (assets && !assets.name.endsWith(".zip")) {
@@ -102,30 +96,26 @@ const command: Command = {
             formData.set("tags", tags);
 
         // Extract zip and append every single file data into "assets" form data key
-        if (assets)
-            try {
-                const buffer = await fetch(assets.url)
-                    .then(res => res.arrayBuffer());
+        if (assets) {
+            const buffer = await fetch(assets.url)
+                .then(res => res.arrayBuffer());
 
-                const zip = new AdmZip(Buffer.from(buffer));
-                const entries = zip.getEntries();
+            const zip = new AdmZip(Buffer.from(buffer));
+            const entries = zip.getEntries();
 
-                for (const entry of entries) {
-                    if (entry.isDirectory)
-                        throw new Error(`Zip file cannot contain directories. Please only include files, and reference them in the markdown file`);
+            for (const entry of entries) {
+                if (entry.isDirectory)
+                    throw new Error(`Zip file cannot contain directories. Please only include files, and reference them in the markdown file`);
 
-                    const file = entry.getData();
+                const file = entry.getData();
 
-                    formData.append("assets", new Blob([file]), entry.entryName);
-                }
-            } catch (e) {
-                await interaction.followUp({ content: `An error occurred while processing the assets\n\`\`\`\n${e}\n\`\`\``, ephemeral: true });
-                return;
+                formData.append("assets", new Blob([file]), entry.entryName);
             }
 
-        if (assets && !formData.has("assets")) {
-            await interaction.followUp({ content: "No assets found in the zip file", ephemeral: true });
-            return;
+            if (!formData.has("assets")) {
+                await interaction.followUp({ content: "No assets found in the zip file", ephemeral: true });
+                return;
+            }
         }
 
         // Send form data to the server
@@ -140,10 +130,6 @@ const command: Command = {
                     })
                     .catch(err => console.error("Failed to send message to feed channel", err));
                 await interaction.followUp({ content: `Post uploaded successfully\n**Link:** ${siteUrl(`/words/${Math.floor(new Date(word.date).getTime() / 1000).toString(10)}`)}` });
-            })
-            .catch(async e => {
-                await interaction.followUp({ content: `An error occurred while uploading the post\n\`\`\`\n${e}\n\`\`\``, ephemeral: true });
-                return;
             });
     },
 }

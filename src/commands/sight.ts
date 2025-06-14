@@ -82,32 +82,27 @@ const command: Command = {
             formData.set("tags", tags);
 
         // Extract zip and append every single file data into "assets" form data key
+        const buffer = await fetch(images.url)
+            .then(res => res.arrayBuffer());
+
+        // Try extracting as zip first, if it fails, assume it's a single image
         try {
-            const buffer = await fetch(images.url)
-                .then(res => res.arrayBuffer());
+            const zip = new AdmZip(Buffer.from(buffer));
+            const entries = zip.getEntries();
 
-            // Try extracting as zip first, if it fails, assume it's a single image
-            try {
-                const zip = new AdmZip(Buffer.from(buffer));
-                const entries = zip.getEntries();
+            for (const entry of entries) {
+                if (entry.isDirectory)
+                    throw new Error(`Zip file cannot contain directories. Please only include files, and reference them in the markdown file`);
 
-                for (const entry of entries) {
-                    if (entry.isDirectory)
-                        throw new Error(`Zip file cannot contain directories. Please only include files, and reference them in the markdown file`);
+                const file = entry.getData();
 
-                    const file = entry.getData();
-
-                    formData.append("assets", new Blob([file]), entry.entryName);
-                }
-            } catch (e) {
-                if (formData.has("assets"))
-                    throw e;
-
-                formData.append("assets", new Blob([buffer]), images.name);
+                formData.append("assets", new Blob([file]), entry.entryName);
             }
         } catch (e) {
-            await interaction.followUp({ content: `An error occurred while processing the assets\n\`\`\`\n${e}\n\`\`\``, ephemeral: true });
-            return;
+            if (formData.has("assets"))
+                throw e;
+
+            formData.append("assets", new Blob([buffer]), images.name);
         }
 
         if (!formData.has("assets")) {
@@ -127,10 +122,6 @@ const command: Command = {
                     })
                     .catch(err => console.error("Failed to send message to feed channel", err));
                 await interaction.followUp({ content: `Image(s) uploaded successfully\n**Link:** ${siteUrl(`/sights`)}` });
-            })
-            .catch(async e => {
-                await interaction.followUp({ content: `An error occurred while uploading the post\n\`\`\`\n${e}\n\`\`\``, ephemeral: true });
-                return;
             });
     },
 }

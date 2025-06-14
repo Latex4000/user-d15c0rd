@@ -20,21 +20,13 @@ const command: Command = {
     run: async (interaction: ChatInputCommandInteraction) => {
         await interaction.deferReply();
 
-        let member: Member | undefined;
-        try {
-            const data = await fetchHMAC<Member[]>(siteUrl(`/api/member?id=${interaction.user.id}`), "GET");
-            if (data.length)
-                member = data[0];
-        } catch (e) {
-            await interaction.editReply(`An error occurred while fetching member data\n\`\`\`\n${e}\n\`\`\``);
-            console.error(e);
-            return;
-        }
-
-        if (!member) {
+        const data = await fetchHMAC<Member[]>(siteUrl(`/api/member?id=${interaction.user.id}`), "GET");
+        if (!data.length) {
             await interaction.editReply("You are not registered on the site. Run `/join` first");
             return;
         }
+
+        const member = data[0];
 
         const subdomain = memberAliasToHostName(member.alias);
         if (!subdomain) {
@@ -51,16 +43,10 @@ const command: Command = {
             return;
         }
 
-        try {
-            await fetchHMAC(siteUrl(`/api/atproto-dns`), "PUT", {
-                did,
-                subdomain,
-            });
-        } catch (e) {
-            await interaction.followUp(`An error occurred while updating DNS records\n\`\`\`\n${e}\n\`\`\``);
-            console.error(e);
-            return;
-        }
+        await fetchHMAC(siteUrl(`/api/atproto-dns`), "PUT", {
+            did,
+            subdomain,
+        });
 
         await interaction.followUp(`You can now use \`${subdomain}.nonacademic.net\` as your bsky handle. It may take a few minutes for bsky to recognize this change`);
     },

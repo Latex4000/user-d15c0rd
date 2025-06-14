@@ -8,7 +8,7 @@ const command: Command = {
     data: new SlashCommandBuilder()
         .setName("join")
         .setDescription("Join the webring")
-        .addStringOption(option => 
+        .addStringOption(option =>
             option
                 .setName("alias")
                 .setDescription("Your online alias for the webring")
@@ -31,17 +31,11 @@ const command: Command = {
         ]),
     run: async (interaction: ChatInputCommandInteraction) => {
         await interaction.deferReply();
-        // Get JSON Data
+
         let member: Member | undefined = undefined;
-        try {
-            const data: Member[] = await fetchHMAC(siteUrl(`/api/member?id=${interaction.user.id}`), "GET");
-            if (data.length)
-                member = data[0];
-        } catch (e) {
-            await interaction.followUp({ content: `An error occurred while fetching the JSON data\n\`\`\`\n${e}\n\`\`\``, ephemeral: true });
-            console.error(e);
-            return;
-        }
+        const data: Member[] = await fetchHMAC(siteUrl(`/api/member?id=${interaction.user.id}`), "GET");
+        if (data.length)
+            member = data[0];
 
         if (member) {
             if (member.addedRingToSite)
@@ -108,11 +102,7 @@ const command: Command = {
             if (!member)
                 throw new Error("Member not found in response");
             await interaction.followUp({ embeds: [memberInfo(member)], ephemeral: true });
-        })
-        .catch(async (err) => {
-            await interaction.followUp({ content: "An error occurred while joining the webring\n\`\`\`\n" + err + "\n\`\`\`", ephemeral: true })
         });
-        
     },
 }
 

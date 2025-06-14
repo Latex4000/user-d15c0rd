@@ -6,23 +6,16 @@ import { siteUrl } from "../config.js";
 
 async function runDiscordBotSubcommand(interaction: ChatInputCommandInteraction): Promise<void> {
     await interaction.deferReply({ ephemeral: true });
-    // Get output.log file
+
     const filePath = `${process.cwd()}/output.log`;
-    try {
-        const file = await readFile(filePath);
-        // Send the file to the user
-        await interaction.followUp({
-            content: "Here is the output.log file:",
-            files: [{
-                name: "output.log",
-                attachment: file,
-            }],
-        });
-    } catch (error) {
-        await interaction.followUp({
-            content: `\n\`\`\`${error}\`\`\``,
-        });
-    }
+    const file = await readFile(filePath);
+
+    await interaction.followUp({
+        files: [{
+            name: "output.log",
+            attachment: file,
+        }],
+    });
 }
 
 interface WebJournal {
@@ -36,34 +29,28 @@ async function runWebServerSubcommand(interaction: ChatInputCommandInteraction):
 
     const combinedJournals: WebJournal[] = [];
     let currentCombinedJournal: WebJournal | undefined;
+    const journals = await fetchHMAC<WebJournal[]>(siteUrl("/api/journal"), "GET");
 
-    try {
-        const journals = await fetchHMAC<WebJournal[]>(siteUrl("/api/journal"), "GET");
-
-        for (const journal of journals) {
-            if (currentCombinedJournal == null) {
-                currentCombinedJournal = journal;
-                continue;
-            }
-
-            if (
-                currentCombinedJournal.priority !== journal.priority ||
-                currentCombinedJournal.timestamp !== journal.timestamp
-            ) {
-                combinedJournals.push(currentCombinedJournal);
-                currentCombinedJournal = journal;
-                continue;
-            }
-
-            currentCombinedJournal.message += "\n" + journal.message;
+    for (const journal of journals) {
+        if (currentCombinedJournal == null) {
+            currentCombinedJournal = journal;
+            continue;
         }
 
-        if (currentCombinedJournal != null) {
+        if (
+            currentCombinedJournal.priority !== journal.priority ||
+            currentCombinedJournal.timestamp !== journal.timestamp
+        ) {
             combinedJournals.push(currentCombinedJournal);
+            currentCombinedJournal = journal;
+            continue;
         }
-    } catch (error) {
-        await interaction.editReply(`An error occurred while requesting logs:\n\`\`\`\n${error}\n\`\`\``);
-        return;
+
+        currentCombinedJournal.message += "\n" + journal.message;
+    }
+
+    if (currentCombinedJournal != null) {
+        combinedJournals.push(currentCombinedJournal);
     }
 
     const embedPriorityColors = [
