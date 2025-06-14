@@ -1,7 +1,7 @@
 import { spawn } from "node:child_process";
 import { createServer } from "node:http";
 import { format } from "node:util";
-import { ChatInputCommandInteraction, Client, DiscordAPIError, GatewayIntentBits, InteractionReplyOptions, InteractionResponse, Message, MessageCreateOptions, messageLink, REST, RESTPutAPIApplicationCommandsJSONBody, Routes } from "discord.js";
+import { ApplicationCommandOptionType, ChatInputCommandInteraction, Client, DiscordAPIError, GatewayIntentBits, InteractionReplyOptions, InteractionResponse, Message, MessageCreateOptions, messageLink, REST, RESTPutAPIApplicationCommandsJSONBody, Routes } from "discord.js";
 import { commands } from "./commands/index.js";
 import youtubeClient from "./oauth/youtube.js";
 import config from "./config.js";
@@ -102,16 +102,24 @@ discordClient.on("interactionCreate", async (interaction) => {
             return;
         }
 
+        const optionData = interaction.options.data.filter((option) =>
+            option.type !== ApplicationCommandOptionType.Subcommand &&
+            option.type !== ApplicationCommandOptionType.SubcommandGroup,
+        );
         const interactionSummary = [
             interaction.createdAt.toUTCString(),
-            `Command: \`${interaction.options.data}\``,
-            "Options:",
-            interaction.options.data
+            `Command: \`${[
+                interaction.commandName,
+                interaction.options.getSubcommandGroup(false),
+                interaction.options.getSubcommand(false),
+            ].filter(Boolean).join(" ")}\``,
+            `Options:${optionData.length ? "" : " None"}`,
+            optionData
                 .map((option) => `- \`${option.name}\`: \`${JSON.stringify(option.value)}\``)
                 .join("\n"),
             `User: \`${interaction.user.displayName}\` (\`${interaction.user.id}\`)`,
             `Channel: ${interaction.channel == null ? "None" : "name" in interaction.channel ? `\`${interaction.channel.name}\`` : "DM"} (<#${interaction.channelId}>)`,
-        ].join("\n");
+        ].filter(Boolean).join("\n");
 
         const collectiveMessage = await logErrorToCollectiveChannel(`${interactionSummary}\n\n\`\`\`\n${format(error)}\n\`\`\``);
 
