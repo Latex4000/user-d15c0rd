@@ -9,10 +9,18 @@ import DiscordInteractionError from "./DiscordInteractionError.js";
 const rest = new REST({ version: "10" }).setToken(config.discord.token);
 
 console.log("Started refreshing slash (/) commands.");
-await rest.put(
-    Routes.applicationCommands(config.discord.client_id),
-    { body: commands.map(c => c.data.toJSON()) satisfies RESTPutAPIApplicationCommandsJSONBody },
-);
+try {
+    await rest.put(
+        Routes.applicationCommands(config.discord.client_id),
+        { body: commands.map(c => c.data.toJSON()) satisfies RESTPutAPIApplicationCommandsJSONBody },
+    );
+} catch (error) {
+    if (error instanceof DiscordAPIError)
+        console.error(`Failed to refresh slash commands: ${error.message} (code: ${error.code})`);
+    else
+        console.error(`Failed to refresh slash commands: ${error}`);
+    process.exit(1);
+}
 console.log(`Successfully refreshed slash (/) commands`);
 
 export const discordClient = new Client({
