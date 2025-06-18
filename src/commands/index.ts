@@ -14,6 +14,7 @@ import restore from "./restore.js";
 import sight from "./sight.js";
 import sound from "./sound.js";
 import ticket from "./ticket.js";
+import tunicwild from "./tunicwild.js";
 import updateandrestart from "./updateandrestart.js";
 import word from "./word.js";
 export interface Command {
@@ -38,6 +39,7 @@ commands.push(restore);
 commands.push(sight);
 commands.push(sound);
 commands.push(ticket);
+commands.push(tunicwild);
 commands.push(updateandrestart);
 commands.push(word);
 

@@ -3,7 +3,7 @@ import { Command } from "./index.js";
 import { fetchHMAC } from "../fetch.js";
 import { siteUrl } from "../config.js";
 import { ThingType, Things } from "../types/thing.js";
-import choose from "../choose.js";
+import { choose } from "../choose.js";
 import { changeStatusSoundcloud } from "../oauth/soundcloud.js";
 import youtubeClient from "../oauth/youtube.js";
 import confirm from "../confirm.js";
