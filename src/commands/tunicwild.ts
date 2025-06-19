@@ -118,6 +118,11 @@ const command: Command = {
                         .setRequired(false))
                 .addStringOption(option =>
                     option
+                        .setName("official_link")
+                        .setDescription("An official link to the song/game's OST")
+                        .setRequired(false))
+                .addStringOption(option =>
+                    option
                         .setName("composer")
                         .setDescription("The composer of the song"))
                         
@@ -148,6 +153,11 @@ const command: Command = {
                         .setRequired(false))
                 .addStringOption(option =>
                     option
+                        .setName("official_link")
+                        .setDescription("An official link to the song/game's OST")
+                        .setRequired(false))
+                .addStringOption(option =>
+                    option
                         .setName("title")
                         .setDescription("The title of the song"))
                 .addStringOption(option =>
@@ -172,12 +182,14 @@ const command: Command = {
         const commandType = interaction.options.getSubcommand();
         const audio = interaction.options.getAttachment("audio");
         let game = interaction.options.getString("game");
+        const releaseDate = interaction.options.getString("release_date");
+        const officialLink = interaction.options.getString("official_link");
         const extraHint = interaction.options.getString("extra_hint");
         const title = interaction.options.getString("title");
         const composer = interaction.options.getString("composer");
 
-        if (!audio || !game || !extraHint) {
-            await respond(interaction, { content: "You must provide an audio file, game, and extra hint", ephemeral: true });
+        if (!audio || !game || !extraHint || !releaseDate || !officialLink) {
+            await respond(interaction, { content: "You must provide an audio file, game name, extra hint, release date, and official link", ephemeral: true });
             return;
         }
 
@@ -326,12 +338,8 @@ const command: Command = {
                     formData.set("extraHint", extraHint);
                     formData.set("title", audioFile.title || parseFilenameTitle(audioFile.filename));
                     formData.set("composer", audioFile.composer || composer || "Unknown");
-                    
-                    // Set release date - use provided date or current date as fallback
-                    const releaseDate = interaction.options.getString("release_date") 
-                        ? new Date(interaction.options.getString("release_date")!).toISOString()
-                        : new Date().toISOString();
-                    formData.set("releaseDate", releaseDate);
+                    formData.set("releaseDate", new Date(releaseDate).toISOString().split("T")[0]);
+                    formData.set("officialLink", officialLink);
         
                     await fetchHMAC(siteUrl(`/api/tunicwilds`), "POST", formData);
                     successes.push(audioFile.title || fileName);
@@ -365,11 +373,8 @@ const command: Command = {
                 formData.set("extraHint", extraHint);
                 formData.set("title", title || audioFiles[0].title || parseFilenameTitle(audio.name));
                 formData.set("composer", composer || audioFiles[0].composer || "Unknown");
-                
-                const releaseDate = interaction.options.getString("release_date") 
-                    ? new Date(interaction.options.getString("release_date")!).toISOString()
-                    : new Date().toISOString();
-                formData.set("releaseDate", releaseDate);
+                formData.set("releaseDate", new Date(releaseDate).toISOString().split("T")[0]);
+                formData.set("officialLink", officialLink);
         
                 await fetchHMAC(siteUrl(`/api/tunicwilds`), "POST", formData);
                 await respond(interaction, { content: `Successfully added song to **${game}**!` });

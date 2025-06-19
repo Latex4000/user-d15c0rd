@@ -3,6 +3,7 @@ export interface Tunicwild {
     composer: string;
     game: string;
     releaseDate: string;
+    officialLink: string;
     extraHint: string;
     filename: string;
 }
