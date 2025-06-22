@@ -1,6 +1,6 @@
 import { ChatInputCommandInteraction, InteractionContextType, SlashCommandBuilder } from "discord.js";
 import { Command } from "./index.js";
-import { mkdir, readdir, readFile, unlink, writeFile } from "node:fs/promises";
+import { mkdir, readdir, readFile, rm, unlink, writeFile } from "node:fs/promises";
 import { respond } from "../index.js";
 import { exec } from "node:child_process";
 import { createHash } from "node:crypto";
@@ -385,7 +385,7 @@ const command: Command = {
 
         // Clean up the temporary folder
         try {
-            await unlink(folder);
+            await rm(folder, { recursive: true, force: true });
         } catch (error) {
             console.warn(`Failed to clean up temporary files: ${error}`);
         }
