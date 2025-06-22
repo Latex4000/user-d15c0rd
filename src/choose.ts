@@ -1,5 +1,5 @@
 import { randomUUID } from "crypto";
-import { ActionRowBuilder, ButtonBuilder, ButtonStyle, ChatInputCommandInteraction, Interaction, StringSelectMenuBuilder, StringSelectMenuInteraction, Message } from "discord.js";
+import { ActionRowBuilder, ButtonBuilder, ButtonStyle, ChatInputCommandInteraction, Interaction, StringSelectMenuBuilder, StringSelectMenuInteraction } from "discord.js";
 import { Thing, ThingType } from "./types/thing.js";
 import { fetchHMAC } from "./fetch.js";
 import { siteUrl } from "./config.js";
@@ -27,11 +27,11 @@ async function paginateFetch (interaction: ChatInputCommandInteraction, thingTyp
     return { things: data.things, prevCursor: data.prevCursor, nextCursor: data.nextCursor };
 }
 
-function stringMenu (things: Thing[], thingType: ThingType, selectMenuID: string) {
+function stringMenu (things: Thing[], thingType: ThingType, selectMenuID: string, placeholderText?: string) {
     return new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(
         new StringSelectMenuBuilder()
             .setCustomId(selectMenuID)
-            .setPlaceholder(`Choose a ${thingType} to delete`)
+            .setPlaceholder(placeholderText ?? `Choose a ${thingType} to delete`)
             .addOptions(
                 things.map(thing => ({
                     label: thing.title.length > 100 ? thing.title.slice(0, 97) + "..." : thing.title,
@@ -60,7 +60,7 @@ function buttons (disablePrev: boolean, disableNext: boolean) {
     );
 }
 
-export default async function choose(interaction: ChatInputCommandInteraction, thingType: ThingType, showDeleted: boolean): Promise<Thing | null> {
+export async function choose(interaction: ChatInputCommandInteraction, thingType: ThingType, showDeleted: boolean, placeholderText?: string): Promise<Thing | null> {
     if (!interaction.channel?.isSendable()) {
         await interaction.reply({ content: "I cannot send messages in that channel", ephemeral: true });
         return null;
@@ -81,7 +81,7 @@ export default async function choose(interaction: ChatInputCommandInteraction, t
     const firstThing = things[0];
 
     let selectMenuID = randomUUID();
-    let menuRow = stringMenu(things, thingType, selectMenuID);
+    let menuRow = stringMenu(things, thingType, selectMenuID, placeholderText);
     let buttonRow = buttons(firstThing.id === prevCursor || !prevCursor, !nextCursor);
 
     const update = await interaction.channel.send({
@@ -139,7 +139,7 @@ export default async function choose(interaction: ChatInputCommandInteraction, t
                 nextCursor = newNextCursor;
 
                 selectMenuID = randomUUID();
-                menuRow = stringMenu(things, thingType, selectMenuID);
+                menuRow = stringMenu(things, thingType, selectMenuID, placeholderText);
                 buttonRow = buttons(firstThing.id === prevCursor || !prevCursor, !nextCursor);
 
                 await update.edit({
@@ -160,3 +160,56 @@ export default async function choose(interaction: ChatInputCommandInteraction, t
         });
     });
 }
+
+export async function simpleChoose(interaction: ChatInputCommandInteraction, items: string[]): Promise<string | null> {
+    if (!interaction.channel?.isSendable()) {
+        await interaction.reply({ content: "I cannot send messages in that channel", ephemeral: true });
+        return null;
+    }
+
+    if (!items.length) {
+        await interaction.followUp({
+            content: "No items found.",
+            ephemeral: true
+        });
+        return null;
+    }
+
+    const selectMenuID = randomUUID();
+    const menuRow = new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(
+        new StringSelectMenuBuilder()
+            .setCustomId(selectMenuID)
+            .setPlaceholder("Choose an item")
+            .addOptions(
+                items.map((item, index) => ({
+                    label: item.length > 100 ? item.slice(0, 97) + "..." : item,
+                    value: index.toString()
+                }))
+            )
+    );
+
+    const update = await interaction.channel.send({
+        content: "Choose an item:",
+        components: [menuRow],
+    });
+
+    return new Promise<string | null>(resolve => {
+        const filter = (i: Interaction) => i.user.id === interaction.user.id;
+        const collector = update.createMessageComponentCollector({ filter, time: 900000 });
+
+        collector.on("collect", async i => {
+            if (i.customId === selectMenuID) {
+                await update.delete();
+                collector.stop();
+                resolve(items[parseInt((i as StringSelectMenuInteraction).values[0])]);
+                return;
+            }
+        });
+
+        collector.on("end", async () => {
+            await update.delete();
+            await interaction.followUp({ content: "You took too long to respond. Cancelling.", ephemeral: true });
+            resolve(null);
+        });
+    });
+} 
