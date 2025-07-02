@@ -333,6 +333,7 @@ const command: Command = {
                         type: getContentType(fileName) 
                     });
         
+                    formData.set("discord", interaction.user.id);
                     formData.set("file", file);
                     formData.set("game", game);
                     formData.set("extraHint", extraHint);
