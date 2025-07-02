@@ -368,7 +368,8 @@ const command: Command = {
                 const file = new File([blob], audio.name, { 
                     type: getContentType(audio.name) 
                 });
-        
+                
+                formData.set("discord", interaction.user.id);
                 formData.set("file", file);
                 formData.set("game", game);
                 formData.set("extraHint", extraHint);
