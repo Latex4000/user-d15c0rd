@@ -15,6 +15,7 @@ import sight from "./sight.js";
 import sound from "./sound.js";
 import ticket from "./ticket.js";
 import updateandrestart from "./updateandrestart.js";
+import unconfirm from "./unconfirm.js";
 import word from "./word.js";
 export interface Command {
     data: SlashCommandBuilder | SlashCommandSubcommandsOnlyBuilder | SlashCommandOptionsOnlyBuilder;
@@ -39,6 +40,7 @@ commands.push(sight);
 commands.push(sound);
 commands.push(ticket);
 commands.push(updateandrestart);
+commands.push(unconfirm);
 commands.push(word);
 
 export { commands };
