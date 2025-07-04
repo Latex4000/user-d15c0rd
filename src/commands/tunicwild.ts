@@ -352,8 +352,8 @@ const command: Command = {
         
             const resultMessage = [
                 `Upload complete!`,
-                successes.length > 0 ? `✅ Successfully added: ${successes.join(", ")}` : "",
-                failures.length > 0 ? `❌ Failed to add: ${failures.join(", ")}` : ""
+                successes.length > 0 ? `✅ Successfully added:\n${successes.join("\n")}` : "",
+                failures.length > 0 ? `❌ Failed to add:\n${failures.join("\n")}` : ""
             ].filter(Boolean).join("\n");
         
             await respond(interaction, { content: resultMessage });
