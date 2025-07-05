@@ -108,11 +108,6 @@ const command: Command = {
                         .setRequired(true))
                 .addStringOption(option =>
                     option
-                        .setName("extra_hint")
-                        .setDescription("An extra hint for the song")
-                        .setRequired(true))
-                .addStringOption(option =>
-                    option
                         .setName("release_date")
                         .setDescription("Release date of the song/game (YYYY-MM-DD)")
                         .setRequired(false))
@@ -140,11 +135,6 @@ const command: Command = {
                     option
                         .setName("game")
                         .setDescription("The game the song is from")
-                        .setRequired(true))
-                .addStringOption(option =>
-                    option
-                        .setName("extra_hint")
-                        .setDescription("An extra hint for the song")
                         .setRequired(true))
                 .addStringOption(option =>
                     option
@@ -184,12 +174,11 @@ const command: Command = {
         let game = interaction.options.getString("game");
         const releaseDate = interaction.options.getString("release_date");
         const officialLink = interaction.options.getString("official_link");
-        const extraHint = interaction.options.getString("extra_hint");
         const title = interaction.options.getString("title");
         const composer = interaction.options.getString("composer");
 
-        if (!audio || !game || !extraHint || !releaseDate || !officialLink) {
-            await respond(interaction, { content: "You must provide an audio file, game name, extra hint, release date, and official link", ephemeral: true });
+        if (!audio || !game || !releaseDate || !officialLink) {
+            await respond(interaction, { content: "You must provide an audio file, game name, release date, and official link", ephemeral: true });
             return;
         }
 
@@ -336,7 +325,6 @@ const command: Command = {
                     formData.set("discord", interaction.user.id);
                     formData.set("file", file);
                     formData.set("game", game);
-                    formData.set("extraHint", extraHint);
                     formData.set("title", audioFile.title || parseFilenameTitle(audioFile.filename));
                     formData.set("composer", audioFile.composer || composer || "Unknown");
                     formData.set("releaseDate", new Date(releaseDate).toISOString().split("T")[0]);
@@ -372,7 +360,6 @@ const command: Command = {
                 formData.set("discord", interaction.user.id);
                 formData.set("file", file);
                 formData.set("game", game);
-                formData.set("extraHint", extraHint);
                 formData.set("title", title || audioFiles[0].title || parseFilenameTitle(audio.name));
                 formData.set("composer", composer || audioFiles[0].composer || "Unknown");
                 formData.set("releaseDate", new Date(releaseDate).toISOString().split("T")[0]);
