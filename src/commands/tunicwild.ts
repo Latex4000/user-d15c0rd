@@ -14,7 +14,7 @@ import { simpleChoose } from "../choose.js";
 import { Tunicwild } from "../types/tunicwild.js";
 
 // Checks if the audio file is actually mp3/wav/ogg/opus and extract metadata/ID3 tags if available
-async function checkAudio(folder: string): Promise<{ title?: string, composer?: string, filename: string }[]> {
+async function checkAudio(folder: string, setComposer?: string, setTitle?: string): Promise<{ title: string, composer: string, filename: string }[]> {
     try {
         const files = await readdir(folder);
         const audioFiles = files.filter(file => {
@@ -23,32 +23,45 @@ async function checkAudio(folder: string): Promise<{ title?: string, composer?: 
         });
         
         const results = await Promise.all(
-            audioFiles.map(async (file) => {
+            audioFiles.map(async (file): Promise<{
+                title: string;
+                composer: string;
+                filename: string;
+            }> => {
                 const filePath = join(folder, file);
                 const ext = extname(file).toLowerCase();
+                if (!['.mp3', '.wav', '.ogg', '.opus'].includes(ext))
+                    throw new Error(`Unsupported audio format: ${ext}`);
                 
-                let title: string | undefined;
-                let composer: string | undefined;
+                let title = setTitle;
+                let composer = setComposer;
                 
+                if (title && composer)
+                    return { title, composer, filename: filePath };
+
                 // Extract metadata for supported formats
-                if (['.mp3', '.wav', '.ogg', '.opus'].includes(ext)) {
-                    try {
-                        const metadata = await new Promise<string>((resolve, reject) => {
-                            exec(`ffprobe -v error -show_entries format_tags=title,composer -of default=noprint_wrappers=1:nokey=1 "${filePath}"`, (error, stdout, stderr) => {
-                                if (error) reject(error);
-                                else resolve(stdout);
-                            });
-                        });
-                        
-                        const tags = metadata.split("\n").filter(line => line.trim() !== "");
-                        title = tags[0] || parseFilenameTitle(filePath);
-                        composer = tags[1] || undefined;
-                    } catch (error) {
-                        console.warn(`Failed to extract metadata from ${filePath}:`, error);
-                    }
-                }
+                const metadata = await new Promise<{ title?: string, artist?: string, composer?: string }>((resolve, reject) => {
+                    exec(`ffprobe -v error -show_entries format_tags=title,artist,composer -of json "${filePath}"`, (error, stdout, stderr) => {
+                        if (error) reject(error);
+                            else {
+                            try {
+                                const parsed = JSON.parse(stdout);
+                                resolve(parsed.format?.tags || {});
+                            } catch (parseError) {
+                                reject(parseError);
+                            }
+                        }
+                    });
+                });
                 
-                return { title, composer, filename: filePath };
+                title = title || metadata.title || undefined;
+                composer = composer || metadata.artist || metadata.composer || undefined;
+                if (title && composer)
+                    return { title, composer, filename: filePath };
+                return {
+                    ...parseFilename(file, composer),
+                    filename: filePath
+                }
             })
         );
         
@@ -58,23 +71,40 @@ async function checkAudio(folder: string): Promise<{ title?: string, composer?: 
     }
 }
 
-function parseFilenameTitle(filename: string): string {
-    let title = basename(filename, extname(filename));
+function parseFilename(filename: string, composer?: string): { title: string, composer: string } {
+    let cleanName = basename(filename, extname(filename));
     
-    // Common filename patterns to clean up
-    title = title
-        .replace(/^\d{1,3}[\.\-_\s]+/, '')
-        .replace(/^(track|song)[\.\-_\s]+/i, '')
-        .replace(/[_\.]/g, ' ')
-        .replace(/-+/g, ' - ')
-        .replace(/\s+/g, ' ')
-        .trim();
-    
-    // If title is empty after cleaning, use original filename without extension
-    if (!title)
-        title = basename(filename, extname(filename));
-    
-    return title;
+    // Extract track number from the beginning or from specific segments
+    cleanName = cleanName.replace(/^\d{1,3}[\.\-_\s]+/, '');
+
+    // Remove common prefixes and suffixes
+    const prefixes = ["OST", "Original Soundtrack", "Soundtrack", "Theme", "Music", "Song", "Track"];
+    const suffixes = ["(Full)", "(Extended)", "(Remix)", "(Remastered)", "(Live)"];
+    const prefixRegex = new RegExp(`^(${prefixes.join('|')})[\\.\-_\s]*`, 'i');
+    const suffixRegex = new RegExp(`[\\.\-_\s]*(${suffixes.join('|')})$`, 'i');
+    cleanName = cleanName.replace(prefixRegex, '').replace(suffixRegex, '').trim();
+
+    // Split by common delimiters, preserving the delimiter info
+    // If composer exists, remove it from parts and use the rest for title
+    // If composer doesn't exist, use the first part as Composer
+    const parts = cleanName.split(/[\.\-_\s]+/).filter(part => part.length > 0);
+    if (composer) {
+        const titleParts = parts.filter(part => part.toLowerCase() !== composer.toLowerCase());
+        return {
+            title: titleParts.join(' ').trim(),
+            composer: composer.trim()
+        };
+    }
+
+    if (parts.length === 0)
+        return { title: "Unknown Title", composer: "Unknown Composer" };
+
+    const title = parts.slice(1).join(' ').trim(); // Use everything after the first part as title
+    const firstPart = parts[0].trim();
+    return {
+        title: title || "Unknown Title",
+        composer: firstPart || "Unknown Composer"
+    };
 }
 
 function getContentType(filename: string): string {
@@ -110,12 +140,12 @@ const command: Command = {
                     option
                         .setName("release_date")
                         .setDescription("Release date of the song/game (YYYY-MM-DD)")
-                        .setRequired(false))
+                        .setRequired(true))
                 .addStringOption(option =>
                     option
                         .setName("official_link")
                         .setDescription("An official link to the song/game's OST")
-                        .setRequired(false))
+                        .setRequired(true))
                 .addStringOption(option =>
                     option
                         .setName("composer")
@@ -140,12 +170,12 @@ const command: Command = {
                     option
                         .setName("release_date")
                         .setDescription("Release date of the song/game (YYYY-MM-DD)")
-                        .setRequired(false))
+                        .setRequired(true))
                 .addStringOption(option =>
                     option
                         .setName("official_link")
                         .setDescription("An official link to the song/game's OST")
-                        .setRequired(false))
+                        .setRequired(true))
                 .addStringOption(option =>
                     option
                         .setName("title")
@@ -226,8 +256,8 @@ const command: Command = {
         }
 
         let audioFiles: {
-            title?: string;
-            composer?: string;
+            title: string;
+            composer: string;
             filename: string;
         }[] = [];
 
@@ -325,8 +355,8 @@ const command: Command = {
                     formData.set("discord", interaction.user.id);
                     formData.set("file", file);
                     formData.set("game", game);
-                    formData.set("title", audioFile.title || parseFilenameTitle(audioFile.filename));
-                    formData.set("composer", audioFile.composer || composer || "Unknown");
+                    formData.set("title", audioFile.title);
+                    formData.set("composer", audioFile.composer);
                     formData.set("releaseDate", new Date(releaseDate).toISOString().split("T")[0]);
                     formData.set("officialLink", officialLink);
         
@@ -360,8 +390,8 @@ const command: Command = {
                 formData.set("discord", interaction.user.id);
                 formData.set("file", file);
                 formData.set("game", game);
-                formData.set("title", title || audioFiles[0].title || parseFilenameTitle(audio.name));
-                formData.set("composer", composer || audioFiles[0].composer || "Unknown");
+                formData.set("title", title || audioFiles[0].title);
+                formData.set("composer", composer || audioFiles[0].composer);
                 formData.set("releaseDate", new Date(releaseDate).toISOString().split("T")[0]);
                 formData.set("officialLink", officialLink);
         
