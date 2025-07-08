@@ -1,5 +1,5 @@
 import { randomUUID } from "crypto";
-import { ActionRowBuilder, ButtonBuilder, ButtonStyle, ChatInputCommandInteraction, Interaction, StringSelectMenuBuilder, StringSelectMenuInteraction } from "discord.js";
+import { ActionRowBuilder, ButtonBuilder, ButtonStyle, ChatInputCommandInteraction, Interaction, MessageFlags, StringSelectMenuBuilder, StringSelectMenuInteraction } from "discord.js";
 import { Thing, ThingType } from "./types/thing.js";
 import { fetchHMAC } from "./fetch.js";
 import { siteUrl } from "./config.js";
@@ -20,7 +20,7 @@ async function paginateFetch (interaction: ChatInputCommandInteraction, thingTyp
     } catch (e) {
         await interaction.followUp({
             content: `Error fetching data: \n\`\`\`\n${e}\n\`\`\``,
-            ephemeral: true
+            flags: MessageFlags.Ephemeral,
         });
         return {};
     }
@@ -62,7 +62,7 @@ function buttons (disablePrev: boolean, disableNext: boolean) {
 
 export async function choose(interaction: ChatInputCommandInteraction, thingType: ThingType, showDeleted: boolean, placeholderText?: string): Promise<Thing | null> {
     if (!interaction.channel?.isSendable()) {
-        await interaction.reply({ content: "I cannot send messages in that channel", ephemeral: true });
+        await interaction.reply({ content: "I cannot send messages in that channel", flags: MessageFlags.Ephemeral });
         return null;
     }
 
@@ -73,7 +73,7 @@ export async function choose(interaction: ChatInputCommandInteraction, thingType
     if (!things.length) {
         await interaction.followUp({
             content: `No ${thingType} found.`,
-            ephemeral: true
+            flags: MessageFlags.Ephemeral,
         });
         return null;
     }
@@ -84,9 +84,10 @@ export async function choose(interaction: ChatInputCommandInteraction, thingType
     let menuRow = stringMenu(things, thingType, selectMenuID, placeholderText);
     let buttonRow = buttons(firstThing.id === prevCursor || !prevCursor, !nextCursor);
 
-    const update = await interaction.channel.send({
+    const update = await interaction.followUp({
         content: `Showing up to 10 ${thingType}...`,
         components: [menuRow, buttonRow],
+        flags: MessageFlags.Ephemeral,
     });
 
     return new Promise<Thing | null>(resolve => {
@@ -110,13 +111,13 @@ export async function choose(interaction: ChatInputCommandInteraction, thingType
                     timeout = false;
                     await update.delete();
                     collector.stop();
-                    await interaction.followUp({ content: "Cancelled", ephemeral: true });
+                    await interaction.followUp({ content: "Cancelled",flags: MessageFlags.Ephemeral });
                     resolve(null);
                     return;
                 }
 
                 if (newDirection !== "prev" && newDirection !== "next") {
-                    await i.followUp({ content: "Invalid button", ephemeral: true });
+                    await i.followUp({ content: "Invalid button", flags: MessageFlags.Ephemeral });
                     return;
                 }
 
@@ -130,7 +131,7 @@ export async function choose(interaction: ChatInputCommandInteraction, thingType
                 }
 
                 if (!newThings.length) {
-                    await i.followUp({ content: "No more things to show", ephemeral: true });
+                    await i.followUp({ content: "No more things to show", flags: MessageFlags.Ephemeral });
                     return;
                 }
 
@@ -147,14 +148,14 @@ export async function choose(interaction: ChatInputCommandInteraction, thingType
                     components: [menuRow, buttonRow],
                 });
 
-                await i.reply({ content: "Updated", ephemeral: true });
+                await i.reply({ content: "Updated", flags: MessageFlags.Ephemeral });
             }
         });
 
         collector.on("end", async () => {
             if (timeout) {
                 await update.delete();
-                await interaction.followUp({ content: "You took too long to respond. Cancelling.", ephemeral: true });
+                await interaction.followUp({ content: "You took too long to respond. Cancelling.", flags: MessageFlags.Ephemeral });
                 resolve(null);
             }
         });
@@ -163,14 +164,14 @@ export async function choose(interaction: ChatInputCommandInteraction, thingType
 
 export async function simpleChoose(interaction: ChatInputCommandInteraction, items: string[]): Promise<string | null> {
     if (!interaction.channel?.isSendable()) {
-        await interaction.reply({ content: "I cannot send messages in that channel", ephemeral: true });
+        await interaction.reply({ content: "I cannot send messages in that channel", flags: MessageFlags.Ephemeral });
         return null;
     }
 
     if (!items.length) {
         await interaction.followUp({
             content: "No items found.",
-            ephemeral: true
+            flags: MessageFlags.Ephemeral,
         });
         return null;
     }
@@ -188,17 +189,21 @@ export async function simpleChoose(interaction: ChatInputCommandInteraction, ite
             )
     );
 
-    const update = await interaction.channel.send({
+    const update = await interaction.followUp({
         content: "Choose an item:",
         components: [menuRow],
+        flags: MessageFlags.Ephemeral,
     });
 
     return new Promise<string | null>(resolve => {
         const filter = (i: Interaction) => i.user.id === interaction.user.id;
         const collector = update.createMessageComponentCollector({ filter, time: 900000 });
 
+        let timeout = true;
+
         collector.on("collect", async i => {
             if (i.customId === selectMenuID) {
+                timeout = false;
                 await update.delete();
                 collector.stop();
                 resolve(items[parseInt((i as StringSelectMenuInteraction).values[0])]);
@@ -207,9 +212,11 @@ export async function simpleChoose(interaction: ChatInputCommandInteraction, ite
         });
 
         collector.on("end", async () => {
-            await update.delete();
-            await interaction.followUp({ content: "You took too long to respond. Cancelling.", ephemeral: true });
-            resolve(null);
+            if (timeout) {
+                await update.delete();
+                await interaction.followUp({ content: "You took too long to respond. Cancelling.", flags: MessageFlags.Ephemeral });
+                resolve(null);
+            }
         });
     });
 } 
