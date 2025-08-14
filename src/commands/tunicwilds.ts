@@ -293,9 +293,9 @@ async function checkAudio(folder: string, interaction: ChatInputCommandInteracti
             const ext = extname(file).toLowerCase();
             return ['.mp3', '.wav', '.ogg', '.opus'].includes(ext);
         });
-        
+
         let parseConfig: ParseConfig | null = null;
-        
+
         // If processing multiple files and neither title nor composer is set, ask for parsing preference
         if (audioFiles.length > 1 && (!setTitle || !setComposer)) {
             const parsingChoice = await simpleChoose(interaction, [
@@ -303,16 +303,16 @@ async function checkAudio(folder: string, interaction: ChatInputCommandInteracti
                 "Choose segments manually",
                 "Auto split by '-' delimiter",
             ]);
-            
+
             if (!parsingChoice)
                 throw new Error("No parsing method selected");
-            
+
             if (parsingChoice === "Use regex pattern")
                 parseConfig = await getRegexConfig(interaction, audioFiles);
             else if (parsingChoice === "Choose segments manually")
                 parseConfig = await getSegmentConfig(interaction, audioFiles[0]); // Use first file as example
         }
-        
+
         const results = await Promise.all(
             audioFiles.map(async (file): Promise<{
                 title: string;
@@ -323,10 +323,10 @@ async function checkAudio(folder: string, interaction: ChatInputCommandInteracti
                 const ext = extname(file).toLowerCase();
                 if (!['.mp3', '.wav', '.ogg', '.opus'].includes(ext))
                     throw new Error(`Unsupported audio format: ${ext}`);
-                
+
                 let title = setTitle;
                 let composer = setComposer;
-                
+
                 if (title && composer)
                     return { title, composer, filename: filePath };
 
@@ -344,12 +344,12 @@ async function checkAudio(folder: string, interaction: ChatInputCommandInteracti
                         }
                     });
                 });
-                
+
                 title = title || metadata.title || undefined;
                 composer = composer || metadata.artist || metadata.composer || undefined;
                 if (title && composer)
                     return { title, composer, filename: filePath };
-                
+
                 const parsed = await parseFilename(file, interaction, composer, parseConfig);
                 return {
                     ...parsed,
@@ -357,7 +357,7 @@ async function checkAudio(folder: string, interaction: ChatInputCommandInteracti
                 };
             })
         );
-        
+
         return results;
     } catch (error) {
         throw new Error(`Failed to read directory ${folder}: ${error}`);
@@ -368,7 +368,7 @@ async function getRegexConfig(interaction: ChatInputCommandInteraction, audioFil
     const message = await interaction.followUp({
         content: `Please provide a regex pattern to parse the filenames. The pattern should have named groups 'title' and 'composer'.\n\nExample files:\n${audioFiles.slice(0, 3).map(f => `\`${basename(f, extname(f))}\``).join('\n')}\n\nExample regex: \`^(?<title>.+?)\\s*-\\s*(?<composer>.+?)$\`\n\nEnter your regex pattern:`
     });
-    
+
     try {
         const response = await (interaction.channel as TextChannel).awaitMessages({
             filter: (m) => m.author.id === interaction.user.id,
@@ -376,37 +376,37 @@ async function getRegexConfig(interaction: ChatInputCommandInteraction, audioFil
             time: 60000,
             errors: ['time']
         });
-        
+
         if (!response?.first()?.content)
             throw new Error("No regex pattern provided");
-        
+
         const regexStr = response.first()!.content.trim();
         const regex = new RegExp(regexStr);
-        
+
         // Test the regex on the first file
         const testFile = basename(audioFiles[0], extname(audioFiles[0]));
         const testMatch = testFile.match(regex);
-        
+
         if (!testMatch?.groups?.title || !testMatch?.groups?.composer)
             throw new Error("Regex pattern doesn't match expected groups 'title' and 'composer'");
-        
+
         // Show preview of how it would parse the first few files
         const preview = audioFiles.slice(0, 3).map(file => {
             const cleanName = basename(file, extname(file));
             const match = cleanName.match(regex);
             return `\`${cleanName}\` → Title: "${match?.groups?.title || 'N/A'}", Composer: "${match?.groups?.composer || 'N/A'}"`;
         }).join('\n');
-        
+
         const confirmMessage = await interaction.followUp({
             content: `Preview of regex parsing:\n${preview}\n\nIs this correct?`
         });
-        
+
         const confirmed = await confirm(interaction, "Is this parsing correct?");
         await confirmMessage.delete();
-        
+
         if (!confirmed)
             throw new Error("Regex parsing not confirmed");
-        
+
         return { regex };
     } catch (error) {
         await message.delete();
@@ -416,22 +416,22 @@ async function getRegexConfig(interaction: ChatInputCommandInteraction, audioFil
 
 async function getSegmentConfig(interaction: ChatInputCommandInteraction, exampleFile: string): Promise<ParseConfig> {
     const cleanName = basename(exampleFile, extname(exampleFile));
-    
+
     // Remove track numbers (patterns like "01.", "1 -", etc.)
     const withoutTrackNumbers = cleanName.replace(/^\d+[\.\-\s]+/, '');
-    
+
     // Split by common delimiters
     const segments = withoutTrackNumbers.split(/[-_]/).map(part => part.trim()).filter(part => part.length > 0);
-    
+
     if (segments.length < 2)
         throw new Error("Not enough segments to choose from");
-    
+
     const segmentOptions = segments.map((segment, index) => `${index + 1}. ${segment}`);
-    
+
     const message = await interaction.followUp({
         content: `Example file: \`${cleanName}\`\nSegments found:\n${segmentOptions.join('\n')}\n\nWhich segments should be used for the **title**? (comma-separated numbers, e.g., "1,2")`
     });
-    
+
     try {
         const titleResponse = await (interaction.channel as TextChannel).awaitMessages({
             filter: (m) => m.author.id === interaction.user.id,
@@ -439,52 +439,52 @@ async function getSegmentConfig(interaction: ChatInputCommandInteraction, exampl
             time: 60000,
             errors: ['time']
         });
-        
+
         if (!titleResponse?.first()?.content)
             throw new Error("No title segments provided");
-        
+
         const titleSegments = titleResponse.first()!.content.trim().split(',').map(n => parseInt(n.trim()) - 1);
-        
+
         const composerMessage = await interaction.followUp({
             content: `Which segments should be used for the **composer**? (comma-separated numbers, e.g., "3")`
         });
-        
+
         const composerResponse = await (interaction.channel as TextChannel).awaitMessages({
             filter: (m) => m.author.id === interaction.user.id,
             max: 1,
             time: 60000,
             errors: ['time']
         });
-        
+
         if (!composerResponse?.first()?.content)
             throw new Error("No composer segments provided");
-        
+
         const composerSegments = composerResponse.first()!.content.trim().split(',').map(n => parseInt(n.trim()) - 1);
-        
+
         // Validate segments
         const maxIndex = segments.length - 1;
         const invalidTitle = titleSegments.some(i => i < 0 || i > maxIndex);
         const invalidComposer = composerSegments.some(i => i < 0 || i > maxIndex);
-        
+
         if (invalidTitle || invalidComposer)
             throw new Error("Invalid segment numbers provided");
-        
+
         // Show preview
         const titlePreview = titleSegments.map(i => segments[i]).join(' ');
         const composerPreview = composerSegments.map(i => segments[i]).join(' ');
-        
+
         const previewMessage = await interaction.followUp({
             content: `Preview: Title: "${titlePreview}", Composer: "${composerPreview}"\n\nIs this correct?`
         });
-        
+
         const confirmed = await confirm(interaction, "Is this segment selection correct?");
         await previewMessage.delete();
         await message.delete();
         await composerMessage.delete();
-        
+
         if (!confirmed)
             throw new Error("Segment selection not confirmed");
-        
+
         return { titleSegments, composerSegments };
     } catch (error) {
         await message.delete();
@@ -494,10 +494,10 @@ async function getSegmentConfig(interaction: ChatInputCommandInteraction, exampl
 
 async function parseFilename(filename: string, interaction: ChatInputCommandInteraction, composer?: string | null, parseConfig?: ParseConfig | null): Promise<ParsedFilename> {
     let cleanName = basename(filename, extname(filename));
-    
+
     // Remove track numbers (patterns like "01.", "1 -", etc.)
     cleanName = cleanName.replace(/^\d+[\.\-\s]+/, '');
-    
+
     // If we have a regex config, use it
     if (parseConfig?.regex) {
         const match = cleanName.match(parseConfig.regex);
@@ -509,23 +509,23 @@ async function parseFilename(filename: string, interaction: ChatInputCommandInte
         }
         throw new Error(`Regex pattern didn't match filename: ${filename}`);
     }
-    
+
     // If we have segment config, use it
     if (parseConfig?.titleSegments && parseConfig?.composerSegments) {
         const segments = cleanName.split(/[-_]/).map(part => part.trim()).filter(part => part.length > 0);
-        
+
         const title = parseConfig.titleSegments.map(i => segments[i]).filter(s => s).join(' ');
         const composerFromSegments = parseConfig.composerSegments.map(i => segments[i]).filter(s => s).join(' ');
-        
+
         if (!title)
             throw new Error(`Could not extract title from filename: ${filename}`);
-        
+
         return {
             title,
             composer: composer || composerFromSegments || 'Unknown'
         };
     }
-    
+
     // Fall back to original individual parsing logic
     const parts = cleanName.split(/[-_]/).map(part => part.trim()).filter(part => part.length > 0);
 
@@ -595,7 +595,7 @@ const command: Command = {
                     option
                         .setName("composer")
                         .setDescription("The composer of the songs"))
-                        
+
         )
         .addSubcommand(subcommand =>
             subcommand
@@ -784,19 +784,19 @@ const command: Command = {
         if (commandType === "batch") {
             const successes: string[] = [];
             const failures: string[] = [];
-        
+
             for (const audioFile of audioFiles) {
                 try {
                     const formData = new FormData();
-                    
+
                     // Read the actual file content
                     const fileBuffer = await readFile(audioFile.filename);
                     const fileName = basename(audioFile.filename);
                     const blob = new Blob([fileBuffer]);
-                    const file = new File([blob], fileName, { 
-                        type: getContentType(fileName) 
+                    const file = new File([blob], fileName, {
+                        type: getContentType(fileName)
                     });
-        
+
                     formData.set("discord", interaction.user.id);
                     formData.set("file", file);
                     formData.set("game", game);
@@ -804,7 +804,7 @@ const command: Command = {
                     formData.set("composer", audioFile.composer);
                     formData.set("releaseDate", new Date(releaseDate).toISOString().split("T")[0]);
                     formData.set("officialLink", officialLink);
-        
+
                     await fetchHMAC(siteUrl(`/api/tunicwilds`), "POST", formData);
                     successes.push(audioFile.title || fileName);
                 } catch (error) {
@@ -812,26 +812,26 @@ const command: Command = {
                     failures.push(audioFile.title || basename(audioFile.filename));
                 }
             }
-        
+
             const resultMessage = [
                 `Upload complete!`,
                 successes.length > 0 ? `✅ Successfully added:\n${successes.join("\n")}` : "",
                 failures.length > 0 ? `❌ Failed to add:\n${failures.join("\n")}` : ""
             ].filter(Boolean).join("\n");
-        
+
             await respond(interaction, { content: resultMessage });
         } else {
             // Single file upload
             try {
                 const formData = new FormData();
-                
+
                 // Read the actual file content
                 const fileBuffer = await readFile(audioFiles[0].filename);
                 const blob = new Blob([fileBuffer]);
-                const file = new File([blob], audio.name, { 
-                    type: getContentType(audio.name) 
+                const file = new File([blob], audio.name, {
+                    type: getContentType(audio.name)
                 });
-                
+
                 formData.set("discord", interaction.user.id);
                 formData.set("file", file);
                 formData.set("game", game);
@@ -839,7 +839,7 @@ const command: Command = {
                 formData.set("composer", composer || audioFiles[0].composer);
                 formData.set("releaseDate", new Date(releaseDate).toISOString().split("T")[0]);
                 formData.set("officialLink", officialLink);
-        
+
                 await fetchHMAC(siteUrl(`/api/tunicwilds`), "POST", formData);
                 await respond(interaction, { content: `Successfully added song to **${game}**!` });
             } catch (error) {
