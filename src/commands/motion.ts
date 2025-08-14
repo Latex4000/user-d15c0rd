@@ -86,6 +86,8 @@ const motion: Command = {
             return;
         }
 
+        await using disposables = new AsyncDisposableStack();
+
         // Check if the video file is suitable for youtube
         await mkdir(".tmp", { recursive: true });
         const videoPath = `./.tmp/${interaction.user.id}.mp4`;
@@ -96,6 +98,7 @@ const motion: Command = {
             }
             await fetch(video.url)
                 .then(async response => writeFile(videoPath, Buffer.from(await response.arrayBuffer())));
+            disposables.defer(() => unlink(videoPath));
 
             try {
                 const errors = await checkVideoForYoutube(videoPath, {
@@ -108,7 +111,6 @@ const motion: Command = {
                         content: `Invalid video format for YouTube:\n${errors.map((error) => "- " + error).join("\n")}`,
                         ephemeral: true,
                     });
-                    await unlink(videoPath);
                     return;
                 }
             } catch (error) {
@@ -116,7 +118,6 @@ const motion: Command = {
                     content: `Error getting video format info:\n\`\`\`\n${error}\n\`\`\``,
                     ephemeral: true,
                 });
-                await unlink(videoPath);
                 return;
             }
         }
@@ -135,6 +136,7 @@ const motion: Command = {
             imagePath = `./.tmp/${createHash("sha256").update(thumbnail.url).digest("hex")}${thumbnail.name.endsWith(".png") ? ".png" : ".jpg"}`;
             await fetch(thumbnail.url)
                 .then(async response => writeFile(imagePath!, Buffer.from(await response.arrayBuffer())));
+            disposables.defer(() => unlink(imagePath!));
         }
 
         try {
@@ -181,11 +183,6 @@ const motion: Command = {
                 ephemeral: true
             });
         }
-        await Promise.allSettled([
-            imagePath ? unlink(imagePath) : Promise.resolve(),
-            unlink(videoPath),
-        ]).catch((error) => console.error("Failed to delete temporary files", error));
-        return;
     },
 }
 
