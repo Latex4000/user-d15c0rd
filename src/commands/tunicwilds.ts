@@ -304,12 +304,12 @@ function getContentType(filename: string): string {
 
 const command: Command = {
     data: new SlashCommandBuilder()
-        .setName("tunicwild")
-        .setDescription("Add a song/songs to the indie game heardle")
+        .setName("tunicwilds")
+        .setDescription("Add a song or songs to Tunicwilds")
         .addSubcommand(subcommand =>
             subcommand
                 .setName("batch")
-                .setDescription("Add a batch of songs to the indie game heardle")
+                .setDescription("Add a batch of songs to Tunicwilds")
                 .addAttachmentOption(option =>
                     option
                         .setName("audio")
@@ -318,28 +318,28 @@ const command: Command = {
                 .addStringOption(option =>
                     option
                         .setName("game")
-                        .setDescription("The game the song is from")
+                        .setDescription("The game the songs are from")
                         .setRequired(true))
                 .addStringOption(option =>
                     option
                         .setName("release_date")
-                        .setDescription("Release date of the song/game (YYYY-MM-DD)")
+                        .setDescription("Release date of the songs or game (YYYY-MM-DD)")
                         .setRequired(true))
                 .addStringOption(option =>
                     option
                         .setName("official_link")
-                        .setDescription("An official link to the song/game's OST")
+                        .setDescription("An official link to the game's OST")
                         .setRequired(true))
                 .addStringOption(option =>
                     option
                         .setName("composer")
-                        .setDescription("The composer of the song"))
+                        .setDescription("The composer of the songs"))
                         
         )
         .addSubcommand(subcommand =>
             subcommand
                 .setName("single")
-                .setDescription("Add a single song to the indie game heardle")
+                .setDescription("Add a song to Tunicwilds")
                 .addAttachmentOption(option =>
                     option
                         .setName("audio")
@@ -353,12 +353,12 @@ const command: Command = {
                 .addStringOption(option =>
                     option
                         .setName("release_date")
-                        .setDescription("Release date of the song/game (YYYY-MM-DD)")
+                        .setDescription("Release date of the song or game (YYYY-MM-DD)")
                         .setRequired(true))
                 .addStringOption(option =>
                     option
                         .setName("official_link")
-                        .setDescription("An official link to the song/game's OST")
+                        .setDescription("An official link to the game's OST")
                         .setRequired(true))
                 .addStringOption(option =>
                     option
@@ -372,7 +372,7 @@ const command: Command = {
         .setContexts([
             InteractionContextType.BotDM,
             InteractionContextType.Guild,
-            InteractionContextType.PrivateChannel
+            InteractionContextType.PrivateChannel,
         ]),
     run: async (interaction: ChatInputCommandInteraction) => {
         await interaction.deferReply();
