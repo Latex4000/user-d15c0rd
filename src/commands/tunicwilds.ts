@@ -1,9 +1,9 @@
-import { ChatInputCommandInteraction, InteractionContextType, SlashCommandBuilder, TextChannel } from "discord.js";
+import { ActionRowBuilder, ButtonBuilder, ButtonInteraction, ButtonStyle, ChatInputCommandInteraction, ComponentType, InteractionContextType, MessageFlags, ModalActionRowComponentBuilder, ModalBuilder, SlashCommandBuilder, TextChannel, TextInputBuilder, TextInputStyle } from "discord.js";
 import { Command } from "./index.js";
 import { mkdir, readdir, readFile, rm, unlink, writeFile } from "node:fs/promises";
 import { respond } from "../index.js";
-import { exec } from "node:child_process";
-import { createHash } from "node:crypto";
+import { exec, execFile } from "node:child_process";
+import { createHash, randomUUID } from "node:crypto";
 import AdmZip from "adm-zip";
 import { fetchHMAC } from "../fetch.js";
 import { basename, extname, join } from "node:path";
@@ -12,6 +12,267 @@ import confirm from "../confirm.js";
 import { levenshteinDistance } from "../levenshtein.js";
 import { simpleChoose } from "../choose.js";
 import { Tunicwild } from "../types/tunicwild.js";
+
+// TODO common module
+function execFileAsync(file: string, args: readonly string[]): Promise<string> {
+    return new Promise((resolve, reject) => {
+        execFile(file, args, (error, stdout) => {
+            if (error != null) {
+                reject(error);
+                return;
+            }
+
+            resolve(stdout);
+        });
+    });
+}
+
+interface FfprobeMetadata {
+    artist?: string;
+    composer?: string;
+    title?: string;
+}
+
+async function getFfprobeMetadata(path: string): Promise<FfprobeMetadata | undefined> {
+    const stdout = await execFileAsync("ffprobe", [
+        "-v", "error",
+        "-show_entries", "format_tags=title,artist,composer",
+        "-output_format", "json",
+        path,
+    ]);
+
+    return JSON.parse(stdout).format?.tags;
+}
+
+interface MetadataForUpload {
+    composer: string;
+    path: string;
+    title: string;
+}
+
+/**
+ * Decide the metadata to use for songs uploaded in a batch. From highest to lowest priority:
+ * 1. Composer given via {@link composerOverride}
+ * 2. Title and composer metadata in the audio file
+ * 3. Artist metadata in the audio file
+ * 4. Prompt for a user-provided regular expression to parse audio filenames
+ */
+async function decideMetadataForUpload(interaction: ChatInputCommandInteraction, batchPath: string, composerOverride: string | undefined): Promise<MetadataForUpload[] | undefined> {
+    const metadatas: MetadataForUpload[] = [];
+    const paths = (await readdir(batchPath)).map((filename) => join(batchPath, filename));
+
+    for (const path of paths) {
+        const ffprobeMetadata = await getFfprobeMetadata(path);
+
+        const composer = composerOverride ?? (ffprobeMetadata?.composer || ffprobeMetadata?.artist || undefined);
+        const title = ffprobeMetadata?.title || undefined;
+
+        // If the composer or title can't be determined for any audio files, fall back to regex prompt
+        if (composer == null || title == null) {
+            return decideMetadataForUploadByRegex(interaction, paths, composerOverride);
+        }
+
+        metadatas.push({ composer, path, title });
+    }
+
+    return metadatas;
+}
+
+async function decideMetadataForUploadByRegex(interaction: ChatInputCommandInteraction, paths: readonly string[], composerOverride: string | undefined): Promise<MetadataForUpload[] | undefined> {
+    const requiresComposer = composerOverride == null;
+    const placeholder = requiresComposer ? "^(?<composer>.+?) - (?<title>.+)$" : "^.+? - (?<title>.+)$";
+
+    let regexString = await promptForRegex(interaction, `
+Some of the tracks you're trying to upload don't have metadata provided by the audio file itself.
+
+If the ${requiresComposer ? "composer and title are" : "title is"} present in each of the filenames, you can write a regular expression with ${requiresComposer ? "capture groups for `composer` and `title`" : "a capture group for `title`"} to fill in the metadata.
+
+Alternatively, cancel the upload, edit the tags of the audio files, and try again.
+        `.trim(), placeholder);
+
+    const metadatas: MetadataForUpload[] = [];
+
+    while (true) {
+        if (regexString == null) {
+            return;
+        }
+
+        try {
+            const regex = new RegExp(regexString);
+
+            for (const path of paths) {
+                const matches = regex.exec(path);
+                const composer = composerOverride ?? matches?.groups?.composer;
+                const title = matches?.groups?.title;
+
+                if (composer == null || title == null) {
+                    throw new Error();
+                }
+
+                metadatas.push({ composer, path, title });
+            }
+        } catch {
+            regexString = await promptForRegex(interaction, `
+The provided regular expression was either invalid or didn't match all of the filenames.
+
+Make sure the expression includes ${requiresComposer ? "capture groups for `composer` and `title`" : "a capture group for `title`"}.
+                `.trim(), placeholder);
+        }
+
+        const okButtonId = randomUUID();
+        const retryButtonId = randomUUID();
+        const cancelButtonId = randomUUID();
+        const message = await interaction.followUp({
+            content: "Do these metadata matches look correct? (only first 3 shown)\n\n" +
+                 metadatas
+                    .slice(0, 3)
+                    .map((metadata) => `Composer: \`${metadata.composer}\`\nTitle: \`${metadata.title}\``)
+                    .join("\n\n"),
+            components: [
+                new ActionRowBuilder<ButtonBuilder>().addComponents(
+                    new ButtonBuilder()
+                        .setCustomId(okButtonId)
+                        .setLabel("Looks good!")
+                        .setStyle(ButtonStyle.Success),
+                    new ButtonBuilder()
+                        .setCustomId(retryButtonId)
+                        .setLabel("Change regex")
+                        .setStyle(ButtonStyle.Primary),
+                    new ButtonBuilder()
+                        .setCustomId(cancelButtonId)
+                        .setLabel("Cancel")
+                        .setStyle(ButtonStyle.Danger),
+                ),
+            ],
+            flags: MessageFlags.Ephemeral,
+            withResponse: true,
+        });
+
+        let buttonInteraction: ButtonInteraction;
+        try {
+            buttonInteraction = await message.awaitMessageComponent<ComponentType.Button>({
+                dispose: true, // TODO ??
+                filter: (buttonInteraction) => buttonInteraction.user.id === interaction.user.id,
+                time: 60 * 1000,
+            });
+        } catch {
+            // Timed out
+            return;
+        }
+        // TODO delete message in finally block?
+
+        switch (buttonInteraction.customId) {
+            case okButtonId:
+                return metadatas;
+
+            // TODO dedupe
+            case retryButtonId:
+                await buttonInteraction.showModal(
+                    new ModalBuilder()
+                        .addComponents(
+                            new ActionRowBuilder<ModalActionRowComponentBuilder>().addComponents(
+                                new TextInputBuilder()
+                                    .setLabel("Regex")
+                                    .setPlaceholder(placeholder)
+                                    .setRequired(true)
+                                    .setStyle(TextInputStyle.Short),
+                            ),
+                        )
+                        .setTitle("Audio filename regular expression"),
+                );
+
+                try {
+                    const modalInteraction = await buttonInteraction.awaitModalSubmit({
+                        filter: (modalInteraction) => modalInteraction.user.id === interaction.user.id,
+                        time: 30 * 60 * 1000,
+                    });
+
+                    regexString = modalInteraction.components[0].components[0].value;
+                } catch {
+                    // Timed out
+                    return;
+                }
+
+                break;
+
+            case cancelButtonId:
+                return;
+
+            default:
+                throw new Error("Received invalid component interaction");
+        }
+    }
+}
+
+async function promptForRegex(interaction: ChatInputCommandInteraction, prompt: string, placeholder: string): Promise<string | undefined> {
+    const continueButtonId = randomUUID();
+    const cancelButtonId = randomUUID();
+    const message = await interaction.followUp({
+        content: prompt,
+        components: [
+            new ActionRowBuilder<ButtonBuilder>().addComponents(
+                new ButtonBuilder()
+                    .setCustomId(continueButtonId)
+                    .setLabel("Enter regex")
+                    .setStyle(ButtonStyle.Success),
+                new ButtonBuilder()
+                    .setCustomId(cancelButtonId)
+                    .setLabel("Cancel")
+                    .setStyle(ButtonStyle.Danger),
+            ),
+        ],
+        flags: MessageFlags.Ephemeral,
+        withResponse: true,
+    });
+
+    let buttonInteraction: ButtonInteraction;
+    try {
+        buttonInteraction = await message.awaitMessageComponent<ComponentType.Button>({
+            dispose: true, // TODO ??
+            filter: (buttonInteraction) => buttonInteraction.user.id === interaction.user.id,
+            time: 60 * 1000,
+        });
+    } catch {
+        // Timed out
+        return;
+    }
+    // TODO delete message in finally block?
+
+    switch (buttonInteraction.customId) {
+        case continueButtonId:
+            await buttonInteraction.showModal(
+                new ModalBuilder()
+                    .addComponents(
+                        new ActionRowBuilder<ModalActionRowComponentBuilder>().addComponents(
+                            new TextInputBuilder()
+                                .setLabel("Regex")
+                                .setPlaceholder(placeholder)
+                                .setRequired(true)
+                                .setStyle(TextInputStyle.Short),
+                        ),
+                    )
+                    .setTitle("Audio filename regular expression"),
+            );
+
+            try {
+                const modalInteraction = await buttonInteraction.awaitModalSubmit({
+                    filter: (modalInteraction) => modalInteraction.user.id === interaction.user.id,
+                    time: 30 * 60 * 1000,
+                });
+
+                return modalInteraction.components[0].components[0].value;
+            } catch {
+                // Timed out
+                return;
+            }
+
+        case cancelButtonId:
+            return;
+
+        default:
+            throw new Error("Received invalid component interaction");
+    }
+}
 
 interface ParsedFilename {
     title: string;
