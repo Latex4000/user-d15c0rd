@@ -33,21 +33,14 @@ const command: Command = {
         ]),
     run: async (interaction: ChatInputCommandInteraction) => {
         await interaction.deferReply();
-        let member: Member | undefined = undefined;
-        try {
-            const data: Member[] = await fetchHMAC(siteUrl(`/api/member?id=${interaction.user.id}`), "GET");
-            if (data.length)
-                member = data[0];
-        } catch (e) {
-            await interaction.followUp({ content: `An error occurred while fetching the JSON data\n\`\`\`\n${e}\n\`\`\``, ephemeral: true });
-            console.error(e);
-            return;
-        }
 
-        if (!member) {
+        const data: Member[] = await fetchHMAC(siteUrl(`/api/member?id=${interaction.user.id}`), "GET");
+        if (!data.length) {
             await interaction.followUp({ content: "You are not in the webring. Run `/join` to join the webring", ephemeral: true });
             return;
         }
+
+        const member = data[0];
 
         const alias = interaction.options.getString("alias");
         let site = interaction.options.getString("site");
@@ -103,38 +96,31 @@ const command: Command = {
                     return;
                 }
 
-                try {
-                    const oldAliasHostName = memberAliasToHostName(oldAlias);
-                    const newAliasHostName = memberAliasToHostName(memberRes.alias);
-                    if (!newAliasHostName) {
-                        await interaction.followUp({ content: `You have updated your webring membership, but your alias is invalid for DNS records (bsky, site redirect)`, embeds: [memberInfo(memberRes)], ephemeral: true });
-                        return;
-                    }
-
-                    let atprotoEnabled = false;
-
-                    if (oldAliasHostName !== newAliasHostName) {
-                        const did = await fetchHMAC<string | null>(siteUrl(`/api/atproto-dns`), "DELETE", {
-                            subdomain: oldAliasHostName,
-                        });
-
-                        if (did != null) {
-                            await fetchHMAC(siteUrl(`/api/atproto-dns`), "PUT", {
-                                did,
-                                subdomain: newAliasHostName,
-                            });
-                            atprotoEnabled = true;
-                        }
-                    }
-
-                    await interaction.followUp({ content: `You have updated your webring membership and your DNS records (allow ~30 minutes for them to be accepted by the internet)\n${atprotoEnabled ? `Updated bsky handle to \`${newAliasHostName}.nonacademic.net\`\n` : ""}${site && member.addedRingToSite ? `Updated site redirect to \`${newAliasHostName}.nonacademic.net\`\n` : ""}`, embeds: [memberInfo(memberRes)], ephemeral: true });
-                } catch (e) {
-                    await interaction.editReply(`An error occurred while fetching the DNS data\n\`\`\`\n${e}\n\`\`\``);
-                    console.error(e);
+                const oldAliasHostName = memberAliasToHostName(oldAlias);
+                const newAliasHostName = memberAliasToHostName(memberRes.alias);
+                if (!newAliasHostName) {
+                    await interaction.followUp({ content: `You have updated your webring membership, but your alias is invalid for DNS records (bsky, site redirect)`, embeds: [memberInfo(memberRes)], ephemeral: true });
                     return;
                 }
-            })
-            .catch(async (err) => await interaction.followUp({ content: "An error occurred while updating your webring membership\n\`\`\`\n" + err + "\n\`\`\`", ephemeral: true }));
+
+                let atprotoEnabled = false;
+
+                if (oldAliasHostName !== newAliasHostName) {
+                    const did = await fetchHMAC<string | null>(siteUrl(`/api/atproto-dns`), "DELETE", {
+                        subdomain: oldAliasHostName,
+                    });
+
+                    if (did != null) {
+                        await fetchHMAC(siteUrl(`/api/atproto-dns`), "PUT", {
+                            did,
+                            subdomain: newAliasHostName,
+                        });
+                        atprotoEnabled = true;
+                    }
+                }
+
+                await interaction.followUp({ content: `You have updated your webring membership and your DNS records (allow ~30 minutes for them to be accepted by the internet)\n${atprotoEnabled ? `Updated bsky handle to \`${newAliasHostName}.nonacademic.net\`\n` : ""}${site && member.addedRingToSite ? `Updated site redirect to \`${newAliasHostName}.nonacademic.net\`\n` : ""}`, embeds: [memberInfo(memberRes)], ephemeral: true });
+            });
     },
 }
 

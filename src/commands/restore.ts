@@ -36,12 +36,7 @@ const command: Command = {
         if (!confirmation)
             return;
 
-        try {
-            await fetchHMAC(siteUrl(`/api/${thingType}?discord=${interaction.user.id}&id=${thing.id}`), "PUT");
-        } catch (e) {
-            await interaction.followUp({ content: `An error occurred while restoring the ${thingType}\n\`\`\`\n${e}\n\`\`\``, ephemeral: true });
-            return;
-        }
+        await fetchHMAC(siteUrl(`/api/${thingType}?discord=${interaction.user.id}&id=${thing.id}`), "PUT");
 
         // Based on thingType, decide the functionality to perform in other places (yt/sc etc) it's a switch block cuz it shouldn't be too massive for each case
         switch (thingType) {

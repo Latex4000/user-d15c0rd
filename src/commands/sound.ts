@@ -250,12 +250,15 @@ const command: Command = {
             return;
         }
 
+        await using disposables = new AsyncDisposableStack();
+
         await mkdir(".tmp", { recursive: true });
 
         // Download the image file first and check its aspect ratio
         const imagePath = `./.tmp/${createHash("sha256").update(image.url).digest("hex")}${image.name.endsWith(".png") ? ".png" : ".jpg"}`;
         await fetch(image.url)
             .then(async response => writeFile(imagePath, Buffer.from(await response.arrayBuffer())));
+        disposables.defer(() => unlink(imagePath));
 
         try {
             const { isHorizontal, width, height } = await checkImageAspectRatio(imagePath);
@@ -265,7 +268,6 @@ const command: Command = {
                     content: `Your image has a vertical/square aspect ratio (**${width}x${height}**; aspect ratio: **${(width / height).toFixed(2)}**; aspect ratio threshold: **${verticalAspectRatioThresh}**).\nThis may be uploaded as a short on YouTube, which you probably don't want **especially if your content contains copyright material, as it will be fully blocked by YouTube if it is a short**.\nIf you want to continue anyway, please use the \`allow_vertical\` option or provide a horizontal image.`,
                     ephemeral: true
                 });
-                await unlink(imagePath);
                 return;
             }
         } catch (err) {
@@ -274,7 +276,6 @@ const command: Command = {
                 content: `Failed to check image aspect ratio. Please ensure your image is horizontal.\n\`\`\`\n${err}\n\`\`\``,
                 ephemeral: true
             });
-            await unlink(imagePath);
             return;
         }
 
@@ -283,11 +284,11 @@ const command: Command = {
         if (video) {
             if (!validExtensions.includes(extname(video.name))) {
                 await respond(interaction, { content: "The video file must be an mp4 file", ephemeral: true });
-                await unlink(imagePath);
                 return;
             }
             await fetch(video.url)
                 .then(async response => writeFile(videoPath, Buffer.from(await response.arrayBuffer())));
+            disposables.defer(() => unlink(videoPath));
 
             // Run ffprobe to check the video file
             try {
@@ -341,8 +342,6 @@ const command: Command = {
                     content: `An error occurred while checking the video file\n\`\`\`\n${err}\n\`\`\``,
                     ephemeral: true
                 });
-                await unlink(videoPath);
-                await unlink(imagePath);
                 return;
             }
         }
@@ -351,17 +350,11 @@ const command: Command = {
         const shortWarning = allowVertical ? "\n\n**You've enabled the 'allow_vertical' option, so your content may be uploaded as a short.**" : "";
         const update = await confirm(interaction, `Title: ${title}\nDescription: ${description || "N/A"}\nTags: ${tags.length > 0 ? tags.join(", ") : "N/A"}${shortWarning}\n\nIs all of your information correct?`);
         if (!update) {
-            await unlink(imagePath);
-            if (video)
-                await unlink(videoPath);
             return;
         }
 
         const ownWork = await confirm(interaction, "This is for content that you made yourself, and doesn't contain content that would nuke the channels\nIs this your own work?");
         if (!ownWork) {
-            await unlink(imagePath);
-            if (video)
-                await unlink(videoPath);
             return;
         }
 
@@ -369,19 +362,14 @@ const command: Command = {
         const audioPath = `./.tmp/${createHash("sha256").update(audio.url).digest("hex")}${audio.name.endsWith(".mp3") ? ".mp3" : ".wav"}`;
         await fetch(audio.url)
             .then(async response => writeFile(audioPath, Buffer.from(await response.arrayBuffer())));
-
-        // Const to delete the temporary video file and the downloaded files
-        const deleteTemporaryFiles = () => Promise.allSettled([
-            canUseYoutube ? unlink(videoPath) : Promise.resolve(),
-            unlink(audioPath),
-            unlink(imagePath),
-        ]).catch((error) => console.error("Failed to delete temporary files", error));
+        disposables.defer(() => unlink(audioPath));
 
         try {
             if (canUseYoutube && !video) {
                 const waitMessage = await interaction.channel.send("Creating the video...");
 
                 await renderStillVideoForYoutube(imagePath, audioPath, videoPath);
+                disposables.defer(() => unlink(videoPath));
 
                 await waitMessage.delete();
             }
@@ -395,12 +383,10 @@ const command: Command = {
                     content: `An error occurred while uploading the video\n\`\`\`\n${err}\n\`\`\``,
                     ephemeral: true
                 });
-                await deleteTemporaryFiles();
                 return;
             }
 
             if (!urls) {
-                await deleteTemporaryFiles();
                 return;
             }
 
@@ -425,7 +411,6 @@ const command: Command = {
                 ephemeral: true
             });
         }
-        await deleteTemporaryFiles();
         return;
     },
 }
