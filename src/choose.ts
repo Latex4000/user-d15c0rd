@@ -162,7 +162,7 @@ export async function choose(interaction: ChatInputCommandInteraction, thingType
     });
 }
 
-export async function simpleChoose(interaction: ChatInputCommandInteraction, items: string[]): Promise<string | null> {
+export async function simpleChoose(interaction: ChatInputCommandInteraction, items: string[], messageContent = "Choose an item:"): Promise<string | null> {
     if (!interaction.channel?.isSendable()) {
         await interaction.reply({ content: "I cannot send messages in that channel", flags: MessageFlags.Ephemeral });
         return null;
@@ -190,7 +190,7 @@ export async function simpleChoose(interaction: ChatInputCommandInteraction, ite
     );
 
     const update = await interaction.followUp({
-        content: "Choose an item:",
+        content: messageContent,
         components: [menuRow],
         flags: MessageFlags.Ephemeral,
     });
