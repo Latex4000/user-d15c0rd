@@ -595,6 +595,7 @@ const command: Command = {
             }
         }
 
+        // TODO better message for non-batch
         const resultMessage = [
             `Upload complete!`,
             successes.length > 0 && `✅ Successfully added:\n${successes.join("\n")}`,
