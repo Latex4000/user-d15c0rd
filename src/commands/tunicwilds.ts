@@ -1,4 +1,3 @@
-import { execFile } from "node:child_process";
 import { createHash, randomUUID } from "node:crypto";
 import { openAsBlob } from "node:fs";
 import { mkdir, readdir, rm, writeFile } from "node:fs/promises";
@@ -14,20 +13,7 @@ import confirm from "../confirm.js";
 import { levenshteinDistance } from "../levenshtein.js";
 import { simpleChoose } from "../choose.js";
 import { Tunicwild } from "../types/tunicwild.js";
-
-// TODO common module
-function execFileAsync(file: string, args: readonly string[]): Promise<string> {
-    return new Promise((resolve, reject) => {
-        execFile(file, args, (error, stdout) => {
-            if (error != null) {
-                reject(error);
-                return;
-            }
-
-            resolve(stdout);
-        });
-    });
-}
+import { execFileAsync } from "../helpers/process.js";
 
 /**
  * Test if a file can be parsed by FFmpeg and contains at least one audio track.
