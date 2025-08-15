@@ -77,27 +77,81 @@ async function decideMetadataForUpload(interaction: ChatInputCommandInteraction,
 
         // If the composer or title can't be determined for some audio files, fall back to regex prompt
         if (composer == null || title == null) {
-            return decideMetadataForUploadByRegex(interaction, paths, composerOverride);
+            return decideMetadataForUploadByRegex(interaction, paths, composerOverride, true);
         }
 
         metadatas.push({ composer, path, title });
     }
 
-    // TODO confirm metadata with user
+    const okButtonId = randomUUID();
+    const useRegexButtonId = randomUUID();
+    const cancelButtonId = randomUUID();
+    const message = await interaction.followUp({
+        content: "Does this metadata look correct? (only first 3 shown)\n\n" +
+            metadatas
+                .slice(0, 3)
+                .map((metadata) => `Composer: \`${metadata.composer}\`\nTitle: \`${metadata.title}\``)
+                .join("\n\n"),
+        components: [
+            new ActionRowBuilder<ButtonBuilder>().addComponents(
+                new ButtonBuilder()
+                    .setCustomId(okButtonId)
+                    .setLabel("Looks good!")
+                    .setStyle(ButtonStyle.Success),
+                new ButtonBuilder()
+                    .setCustomId(useRegexButtonId)
+                    .setLabel("Parse metadata from filenames")
+                    .setStyle(ButtonStyle.Primary),
+                new ButtonBuilder()
+                    .setCustomId(cancelButtonId)
+                    .setLabel("Cancel")
+                    .setStyle(ButtonStyle.Danger),
+            ),
+        ],
+        flags: MessageFlags.Ephemeral,
+        withResponse: true,
+    });
 
-    return metadatas;
+    let buttonInteraction: ButtonInteraction;
+    try {
+        buttonInteraction = await message.awaitMessageComponent<ComponentType.Button>({
+            dispose: true, // TODO ??
+            filter: (buttonInteraction) => buttonInteraction.user.id === interaction.user.id,
+            time: 60 * 1000,
+        });
+    } catch {
+        // Timed out
+        return;
+    }
+    // TODO delete message in finally block?
+
+    switch (buttonInteraction.customId) {
+        case okButtonId:
+            return metadatas;
+
+        case useRegexButtonId:
+            return decideMetadataForUploadByRegex(interaction, paths, composerOverride, false);
+
+        case cancelButtonId:
+            return;
+
+        default:
+            throw new Error("Received invalid component interaction");
+    }
 }
 
-async function decideMetadataForUploadByRegex(interaction: ChatInputCommandInteraction, paths: readonly string[], composerOverride: string | undefined): Promise<MetadataForUpload[] | undefined> {
+async function decideMetadataForUploadByRegex(interaction: ChatInputCommandInteraction, paths: readonly string[], composerOverride: string | undefined, fallbackMessage: boolean): Promise<MetadataForUpload[] | undefined> {
     const requiresComposer = composerOverride == null;
     const placeholder = requiresComposer ? "^(?<composer>.+?) - (?<title>.+)$" : "^.+? - (?<title>.+)$";
 
-    let regexString = await promptForRegex(interaction, `
+    let regexString = await promptForRegex(interaction, fallbackMessage ? `
 Some of the tracks you're trying to upload don't have metadata provided by the audio file itself.
 
 If the ${requiresComposer ? "composer and title are" : "title is"} present in each of the filenames, you can write a regular expression with ${requiresComposer ? "capture groups for `composer` and `title`" : "a capture group for `title`"} to fill in the metadata.
 
 Alternatively, cancel the upload, edit the tags of the audio files, and try again.
+        `.trim() : `
+To parse metadata from audio filenames, you can write a regular expression with ${requiresComposer ? "capture groups for `composer` and `title`" : "a capture group for `title`"}.
         `.trim(), placeholder);
 
     const metadatas: MetadataForUpload[] = [];
