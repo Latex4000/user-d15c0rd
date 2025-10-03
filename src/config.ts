@@ -9,7 +9,6 @@ if (process.env.NODE_ENV === "development") {
 		secret_hmac: "dev",
 		collective: {
 			name: "Latex 4000 (dev)",
-			name_condensed: "latex4000Dev",
 			site_url: "http://localhost:4321"
 		},
 	};
@@ -20,7 +19,6 @@ if (process.env.NODE_ENV === "development") {
 if (
 	!config.secret_hmac ||
 	!config.collective.name ||
-	!config.collective.name_condensed ||
 	!URL.canParse(config.collective.site_url) ||
 	!config.discord.client_id ||
 	!config.discord.token ||

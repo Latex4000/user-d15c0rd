@@ -1,6 +1,5 @@
 import { ColorResolvable, EmbedBuilder } from "discord.js";
-import htmlGenerator from "../htmlGenerator.js";
-import { siteUrl } from "../config.js";
+import config, { siteUrl } from "../config.js";
 
 export interface Member {
     discord: string;
@@ -23,11 +22,21 @@ export function memberInfo(member: Member) {
         .setColor(/^#[A-Fa-f0-9]{6}$/.test(member.color) ? member.color as ColorResolvable: /^([A-Fa-f0-9]{6})$/.test(member.color) ? `#${member.color}` : null);
 
     if (member.site) {
-        let htmlText = `**HTML for Site:** ${htmlGenerator(member.alias)}`;
+        let htmlText = `\`\`\`html
+<div>
+    <a href="${config.collective.site_url}" title="Collective">${config.collective.name}</a>
+    <div>
+        <a href="${config.collective.site_url}/ring?action=prev&amp;from=${member.alias}" title="Previous">←</a>
+        <a href="${config.collective.site_url}/ring?action=rand&amp;from=${member.alias}" title="Random">Random</a>
+        <a href="${config.collective.site_url}/ring?action=next&amp;from=${member.alias}" title="Next">→</a>
+    </div>
+</div>
+\`\`\``;
+
         if (!member.addedRingToSite)
             htmlText += `\n\nConfirm your webring membership by adding the HTML to your site and running \`/confirm\``;
-    
-        embed.addFields({ name: 'Additional Information', value: htmlText });
+
+        embed.addFields({ name: 'HTML for Site', value: htmlText });
     } else {
         embed.addFields({
             name: 'Site Not Provided',
