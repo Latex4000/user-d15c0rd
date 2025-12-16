@@ -14,7 +14,9 @@
   "type": "module",
   "dependencies": {
     "@latex4000/fetch-hmac": "^0.1.1",
+    "@types/busboy": "^1.5.4",
     "adm-zip": "^0.5.16",
+    "busboy": "^1.6.0",
     "discord.js": "^14.17.3",
     "googleapis": "^146.0.0",
     "limiter": "^2.1.0",

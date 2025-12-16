@@ -6,6 +6,7 @@ import { commands } from "./commands/index.js";
 import youtubeClient from "./oauth/youtube.js";
 import config from "./config.js";
 import DiscordInteractionError from "./DiscordInteractionError.js";
+import { handleHttpRequest } from "./server.js";
 
 const rest = new REST({ version: "10" }).setToken(config.discord.token);
 
@@ -162,8 +163,14 @@ export async function respond(interaction: ChatInputCommandInteraction, options:
 await discordClient.login(config.discord.token);
 
 const httpServer = createServer((request, response) => {
-    response.writeHead(404);
-    response.end();
+    void handleHttpRequest(request, response)
+        .catch((error) => {
+            console.error("HTTP handler error", error);
+            if (!response.headersSent)
+                response.writeHead(500, { "Content-Type": "application/json" });
+            if (!response.writableEnded)
+                response.end(JSON.stringify({ error: "Internal server error" }));
+        });
 });
 httpServer.listen(config.http.port, "localhost");
 
