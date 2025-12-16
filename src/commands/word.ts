@@ -1,11 +1,10 @@
 import { ChatInputCommandInteraction, InteractionContextType, SlashCommandBuilder } from "discord.js";
 import { Command } from "./index.js";
-import AdmZip from "adm-zip";
-import { fetchHMAC } from "../fetch.js";
-import { Word } from "../types/word.js";
-import config, { siteUrl } from "../config.js";
-import { discordClient } from "../index.js";
 import confirm from "../confirm.js";
+import { respond } from "../index.js";
+import { siteUrl } from "../config.js";
+import { submitWord } from "../thingSubmissions/word.js";
+import { createWorkDir, cleanupWorkDir, downloadAttachmentToLocalFile } from "../commandUploads.js";
 
 const command: Command = {
     data: new SlashCommandBuilder()
@@ -53,18 +52,19 @@ const command: Command = {
         const assets = interaction.options.getAttachment("assets");
 
         const title = interaction.options.getString("title");
-        const tags = interaction.options.getString("tags");
+        const tagsString = interaction.options.getString("tags") ?? "";
+        const tags = tagsString.length === 0 ? [] : tagsString.split(",").map((tag) => tag.trim()).filter((tag) => tag.length > 0);
         const hideColour = interaction.options.getBoolean("hide_colour") ?? false;
 
         // Check for missing required options
         if (!attachment || !title) {
-            await interaction.followUp({ content: "You must provide at least a post file and a title", ephemeral: true });
+            await respond(interaction, { content: "You must provide at least a post file and a title", ephemeral: true });
             return;
         }
 
         // Check if the file is a markdown or text file
         if (!attachment.name.endsWith(".md") && !attachment.name.endsWith(".txt")) {
-            await interaction.followUp({ content: "The post file must be a markdown or text file", ephemeral: true });
+            await respond(interaction, { content: "The post file must be a markdown or text file", ephemeral: true });
             return;
         }
 
@@ -73,64 +73,57 @@ const command: Command = {
 
         // Check if the assets file is a zip file
         if (assets && !assets.name.endsWith(".zip")) {
-            await interaction.followUp({ content: "The assets file must be a zip file", ephemeral: true });
+            await respond(interaction, { content: "The assets file must be a zip file", ephemeral: true });
             return;
         }
 
         // If attachment is a txt file, do not allow assets
         if (attachment.name.endsWith(".txt") && assets) {
-            await interaction.followUp({ content: "You cannot include assets with a `.txt` file.\nAssets are primarily only for markdown files for if you need to attach images to them.\nPlease remove the assets file and try again.", ephemeral: true });
+            await respond(interaction, { content: "You cannot include assets with a `.txt` file.\nAssets are primarily only for markdown files for if you need to attach images to them.\nPlease remove the assets file and try again.", ephemeral: true });
             return;
         }
+
+        const infoConfirmed = await confirm(interaction, `Title: ${title}\nTags: ${tags.length > 0 ? tags.join(", ") : "N/A"}\n\nIs all of your information correct?`);
+        if (!infoConfirmed)
+            return;
 
         const ownWork = await confirm(interaction, "This is for content that you made yourself\nIs this your own work?");
         if (!ownWork)
             return;
 
-        const formData = new FormData();
-        formData.set("discord", interaction.user.id);
-        formData.set("title", title);
-        formData.set("md", content);
-        formData.set("colour", !hideColour);
-        if (tags)
-            formData.set("tags", tags);
-
-        // Extract zip and append every single file data into "assets" form data key
-        if (assets) {
-            const buffer = await fetch(assets.url)
-                .then(res => res.arrayBuffer());
-
-            const zip = new AdmZip(Buffer.from(buffer));
-            const entries = zip.getEntries();
-
-            for (const entry of entries) {
-                if (entry.isDirectory)
-                    throw new Error(`Zip file cannot contain directories. Please only include files, and reference them in the markdown file`);
-
-                const file = entry.getData();
-
-                formData.append("assets", new Blob([file]), entry.entryName);
+        let workDir: string | null = null;
+        try {
+            let assetsFile = null;
+            if (assets) {
+                workDir = await createWorkDir("word");
+                assetsFile = await downloadAttachmentToLocalFile(assets, workDir, "assets");
             }
 
-            if (!formData.has("assets")) {
-                await interaction.followUp({ content: "No assets found in the zip file", ephemeral: true });
-                return;
-            }
-        }
-
-        // Send form data to the server
-        await fetchHMAC<Word>(siteUrl("/api/words"), "POST", formData)
-            .then(async word => {
-                discordClient.channels.fetch(config.discord.feed_channel_id)
-                    .then(async channel => {
-                        if (channel?.isSendable())
-                            await channel.send({ content: `<@${interaction.user.id}> uploaded a word\n**Link:** ${config.collective.site_url}/words/${Math.floor(new Date(word.date).getTime() / 1000).toString(10)}` });
-                        else
-                            console.error("Failed to send message to feed channel: Channel is not sendable");
-                    })
-                    .catch(err => console.error("Failed to send message to feed channel", err));
-                await interaction.followUp({ content: `Post uploaded successfully\n**Link:** ${siteUrl(`/words/${Math.floor(new Date(word.date).getTime() / 1000).toString(10)}`)}` });
+            const result = await submitWord({
+                memberDiscord: interaction.user.id,
+                title,
+                markdown: content,
+                tags,
+                showColour: !hideColour,
+                confirmInformation: infoConfirmed,
+                confirmOwnWork: true,
+                assetsZip: assetsFile,
             });
+
+            const slug = Math.floor(new Date(result.word.date).getTime() / 1000).toString(10);
+            await respond(interaction, {
+                content: `Post uploaded successfully. Link: ${siteUrl(`/words/${slug}`)}`,
+            });
+        } catch (error) {
+            const message = error instanceof Error ? error.message : "Unknown error";
+            await respond(interaction, {
+                content: `Failed to upload word:\n\`\`\`\n${message}\n\`\`\``,
+                ephemeral: true,
+            });
+        } finally {
+            if (workDir)
+                await cleanupWorkDir(workDir);
+        }
     },
 }
 
