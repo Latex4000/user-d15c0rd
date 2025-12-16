@@ -1,7 +1,12 @@
 import config from "./config.js";
-import { discordClient } from "./index.js";
+import { discordClient, discordDisabled } from "./index.js";
 
 export async function postToFeed(content: string): Promise<void> {
+    if (discordDisabled) {
+        console.info("Discord disabled; skipping feed post:", content);
+        return;
+    }
+
     try {
         const channel = await discordClient.channels.fetch(config.discord.feed_channel_id);
         if (!channel || !channel.isSendable())
