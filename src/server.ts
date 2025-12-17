@@ -247,7 +247,6 @@ export async function handleHttpRequest(req: IncomingMessage, res: ServerRespons
                         tags: parseTags(tagsValue),
                         hideColour: !parseBoolean(getField(form.fields, "colour", false), true),
                         allowYoutubeShorts: parseBoolean(getField(form.fields, "allowYoutubeShorts", false), false),
-                        allowVerticalCover: parseBoolean(getField(form.fields, "allowVerticalCover", false), false),
                         confirmInformation: parseBoolean(getField(form.fields, "confirmInformation", false), false),
                         confirmOwnWork: parseBoolean(getField(form.fields, "confirmOwnWork", false), false),
                         audio: pickFile(form.files, "audio")!,

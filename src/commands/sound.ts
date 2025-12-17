@@ -111,7 +111,6 @@ const command: Command = {
                 tags,
                 hideColour,
                 allowYoutubeShorts: allowShorts,
-                allowVerticalCover: allowShorts,
                 confirmInformation: true,
                 confirmOwnWork: true,
                 audio: audioFile,

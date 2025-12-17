@@ -158,7 +158,6 @@ export interface SoundSubmissionInput {
     tags: string[];
     hideColour: boolean;
     allowYoutubeShorts: boolean;
-    allowVerticalCover: boolean;
     confirmInformation: boolean;
     confirmOwnWork: boolean;
     audio: LocalFile;
@@ -174,7 +173,7 @@ export async function submitSound(input: SoundSubmissionInput): Promise<{ sound:
     ensureExtension(input.audio, validAudioExtensions, "Audio file must be an mp3 or wav file");
     ensureExtension(input.image, validImageExtensions, "The image file must be a png or jpg file");
 
-    await ensureHorizontalCover(input.image.path, input.allowVerticalCover);
+    await ensureHorizontalCover(input.image.path, input.allowYoutubeShorts);
 
     let uploadVideoPath = input.video?.path ?? "";
     if (input.video) {
