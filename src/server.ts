@@ -108,13 +108,21 @@ async function parseMultipart(req: IncomingMessage, canonicalUrl: string): Promi
     });
 
     busboy.on("file", (name, stream, info) => {
-        const filename = info.filename || "upload";
+        const originalName = info.filename?.trim() ?? "";
+
+        // Browsers still emit a "file" part even when no file was chosen; skip those.
+        if (!originalName) {
+            stream.resume();
+            return;
+        }
+
+        const filename = originalName || "upload";
         const destination = join(workDir, `${Date.now()}-${randomUUID()}-${filename}`);
         const writeStream = createWriteStream(destination);
         stream.pipe(writeStream);
         const record: LocalFile = {
             path: destination,
-            originalName: filename,
+            originalName: originalName,
             mimeType: info.mimeType,
             fieldName: name,
         };

@@ -19,9 +19,18 @@ export interface WordSubmissionInput {
     assetsZip?: LocalFile | null;
 }
 
+function ensureZipFile(zipFile: LocalFile): void {
+    const name = zipFile.originalName.toLowerCase();
+    const mime = (zipFile.mimeType ?? "").toLowerCase();
+    if (!name.endsWith(".zip") && !mime.includes("zip"))
+        throw new Error("Assets must be provided as a .zip archive");
+}
+
 async function extractAssets(zipFile?: LocalFile | null): Promise<{ buffer: Buffer; filename: string }[]> {
     if (!zipFile)
         return [];
+
+    ensureZipFile(zipFile);
 
     const zip = new AdmZip(zipFile.path);
     const entries = zip.getEntries();
