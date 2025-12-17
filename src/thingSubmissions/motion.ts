@@ -1,7 +1,7 @@
 import { extname } from "node:path";
 import { checkVideoForYoutube } from "../video.js";
 import youtubeClient from "../oauth/youtube.js";
-import { siteUrl } from "../config.js";
+import { canUseYoutube, siteUrl } from "../config.js";
 import { fetchHMAC } from "../fetch.js";
 import { postToFeed } from "../discordFeed.js";
 import type { Motion } from "../types/motion.js";
@@ -33,6 +33,9 @@ function ensureExtension(file: LocalFile, allowed: Set<string>, message: string)
 }
 
 export async function submitMotion(input: MotionSubmissionInput): Promise<MotionSubmissionResult> {
+    if (!canUseYoutube)
+        throw new Error("YouTube uploads are disabled");
+
     if (!input.title.trim())
         throw new Error("Title is required");
 
