@@ -201,8 +201,6 @@ export async function handleHttpRequest(req: IncomingMessage, res: ServerRespons
     const canonicalUrl = getCanonicalUrl(req);
     const url = new URL(canonicalUrl);
 
-    console.log(url.pathname);
-
     try {
         switch (url.pathname) {
             case "/things/actions": {

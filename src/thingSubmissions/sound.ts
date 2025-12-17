@@ -208,8 +208,8 @@ export async function submitSound(input: SoundSubmissionInput): Promise<{ sound:
         formData.set("soundcloudUrl", uploads.soundcloudUrl);
     if (uploads.youtubeUrl)
         formData.set("youtubeUrl", uploads.youtubeUrl);
-    formData.set("track", await openAsBlob(input.audio.path));
-    formData.set("cover", await openAsBlob(input.image.path));
+    formData.set("track", await openAsBlob(input.audio.path), input.audio.originalName);
+    formData.set("cover", await openAsBlob(input.image.path), input.image.originalName);
 
     const dbTags = [input.genre, ...input.tags].map((tag) => tag.trim()).filter((tag) => tag.length > 0);
     if (dbTags.length)
