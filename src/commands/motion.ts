@@ -1,17 +1,9 @@
 import { ChatInputCommandInteraction, InteractionContextType, SlashCommandBuilder } from "discord.js";
 import { Command } from "./index.js";
-import { mkdir, unlink, writeFile } from "node:fs/promises";
-import { discordClient, respond } from "../index.js";
-import { createHash } from "node:crypto";
-import { fetchHMAC } from "../fetch.js";
-import youtubeClient from "../oauth/youtube.js";
-import { extname } from "node:path";
-import config, { siteUrl } from "../config.js";
+import { respond } from "../index.js";
 import confirm from "../confirm.js";
-import { Motion } from "../types/motion.js";
-import { checkVideoForYoutube } from "../video.js";
-
-const validExtensions = [".mp4", ".mov", ".mkv", ".avi", ".wmv"];
+import { submitMotion } from "../thingSubmissions/motion.js";
+import { createWorkDir, cleanupWorkDir, downloadAttachmentToLocalFile } from "../commandUploads.js";
 
 const motion: Command = {
     data: new SlashCommandBuilder()
@@ -71,58 +63,17 @@ const motion: Command = {
         const title = interaction.options.getString("title");
         const description = interaction.options.getString("description") || "";
         const tagsString = interaction.options.getString("tags") ?? "";
-        const tags = tagsString.length === 0 ? [] : tagsString.split(",").map((tag) => tag.trim());
+        const tags = tagsString.length === 0 ? [] : tagsString.split(",").map((tag) => tag.trim()).filter((tag) => tag.length > 0);
         const thumbnail = interaction.options.getAttachment("thumbnail");
         const hideColour = interaction.options.getBoolean("hide_colour") ?? false;
+        const allowYoutubeShorts = interaction.options.getBoolean("allow_youtube_shorts") ?? false;
 
         if (video === null || title === null) {
             await respond(interaction, { content: "You must provide both a video file, and a title", ephemeral: true });
             return;
         }
 
-        // Check if the image file is a png or jpg
-        if (thumbnail && (!thumbnail.name.endsWith(".png") && !thumbnail.name.endsWith(".jpg"))) {
-            await respond(interaction, { content: "The thumbnail must be a png or jpg file", ephemeral: true });
-            return;
-        }
-
-        await using disposables = new AsyncDisposableStack();
-
-        // Check if the video file is suitable for youtube
-        await mkdir(".tmp", { recursive: true });
-        const videoPath = `./.tmp/${interaction.user.id}.mp4`;
-        if (video) {
-            if (!validExtensions.includes(extname(video.name))) {
-                await respond(interaction, { content: "The video file must be an mp4 file", ephemeral: true });
-                return;
-            }
-            await fetch(video.url)
-                .then(async response => writeFile(videoPath, Buffer.from(await response.arrayBuffer())));
-            disposables.defer(() => unlink(videoPath));
-
-            try {
-                const errors = await checkVideoForYoutube(videoPath, {
-                    allowYoutubeShorts: interaction.options.getBoolean("allow_youtube_shorts") ?? false,
-                    requireAudio: false,
-                });
-
-                if (errors.length > 0) {
-                    await respond(interaction, {
-                        content: `Invalid video format for YouTube:\n${errors.map((error) => "- " + error).join("\n")}`,
-                        ephemeral: true,
-                    });
-                    return;
-                }
-            } catch (error) {
-                await respond(interaction, {
-                    content: `Error getting video format info:\n\`\`\`\n${error}\n\`\`\``,
-                    ephemeral: true,
-                });
-                return;
-            }
-        }
-
-        // Confirmation that the person's information is correct, and the image aspect ratio is correct
+        // Confirmation that the person's information is correct
         const update = await confirm(interaction, `Title: ${title}\nDescription: ${description || "N/A"}\nTags: ${tags.length > 0 ? tags.join(", ") : "N/A"}\n\nNote that if your video has a vertical (tall)/square aspect ratio, it may end up being uploaded as a short instead.\nIf you don't want, then ensure your video is wide\n\nIs all of your information correct?`);
         if (!update)
             return;
@@ -131,57 +82,37 @@ const motion: Command = {
         if (!ownWork)
             return;
 
-        let imagePath: string | undefined = undefined;
-        if (thumbnail) {
-            imagePath = `./.tmp/${createHash("sha256").update(thumbnail.url).digest("hex")}${thumbnail.name.endsWith(".png") ? ".png" : ".jpg"}`;
-            await fetch(thumbnail.url)
-                .then(async response => writeFile(imagePath!, Buffer.from(await response.arrayBuffer())));
-            disposables.defer(() => unlink(imagePath!));
-        }
-
+        let workDir: string | null = null;
         try {
-            // Upload the video to YouTube
-            const ytData = await youtubeClient.upload(title, `${description}\n\nTags: ${tags.length > 0 ? tags.join(", ") : "N/A"}`, tags, videoPath, "motions", imagePath);
-            if (ytData.status?.uploadStatus !== "uploaded") {
-                await respond(interaction, {
-                    content: `An error occurred while uploading the video\n\`\`\`\n${JSON.stringify(ytData, null, 2)}\n\`\`\``,
-                    ephemeral: true
-                });
-                return;
-            }
-            const youtubeUrl = `https://www.youtube.com/watch?v=${ytData.id}`;
+            workDir = await createWorkDir("motion");
+            const videoFile = await downloadAttachmentToLocalFile(video, workDir, "video");
+            const thumbnailFile = thumbnail
+                ? await downloadAttachmentToLocalFile(thumbnail, workDir, "thumbnail")
+                : null;
 
-            // Send to the feed channel too
-            discordClient.channels.fetch(config.discord.feed_channel_id)
-                .then(async channel => {
-                    if (channel?.isSendable())
-                        await channel.send({ content: `<@${interaction.user.id}> uploaded a motion\nTitle: ${title}\nYouTube: ${youtubeUrl}` });
-                    else
-                        console.error("Failed to send message to feed channel: Channel is not sendable");
-                })
-                .catch(err => console.error("Failed to send message to feed channel", err));
-
-            const motionData = {
-                title,
-                youtubeUrl,
+            const result = await submitMotion({
                 memberDiscord: interaction.user.id,
-                showColour: !hideColour,
-                date: new Date(),
+                title,
+                description,
                 tags,
-            }
-
-            await fetchHMAC<Motion>(siteUrl("/api/motions"), "POST", motionData)
-                .then(async (motion) => {
-                    if (!motion)
-                        throw new Error("Failed to create motion");
-                    await respond(interaction, { content: `Uploaded to YouTube: ${youtubeUrl}` });
-                })
-                .catch(async (err) => await respond(interaction, { content: `An error occurred while uploading the song\n\`\`\`\n${err}\n\`\`\``, ephemeral: true }));
-        } catch (err) {
-            await respond(interaction, {
-                content: `An error occurred while creating the video\n\`\`\`\n${err}\n\`\`\``,
-                ephemeral: true
+                hideColour,
+                allowYoutubeShorts,
+                video: videoFile,
+                thumbnail: thumbnailFile,
             });
+
+            await respond(interaction, {
+                content: `Uploaded motion: ${result.uploads.youtubeUrl}`,
+            });
+        } catch (error) {
+            const message = error instanceof Error ? error.message : "Unknown error";
+            await respond(interaction, {
+                content: `Failed to upload motion:\n\`\`\`\n${message}\n\`\`\``,
+                ephemeral: true,
+            });
+        } finally {
+            if (workDir)
+                await cleanupWorkDir(workDir);
         }
     },
 }

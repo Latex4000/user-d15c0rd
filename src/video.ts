@@ -50,7 +50,7 @@ async function getVideoInfo(path: string): Promise<VideoInfo> {
     const stdout = await execFileAsync("ffprobe", [
         "-v", "error",
         "-show_entries", "format=duration,format_name:stream=codec_name,codec_type,width,height",
-        "-output_format", "json",
+        "-of", "json",
         path,
     ]);
     const output: FfprobeOutput = JSON.parse(stdout);

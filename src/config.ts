@@ -3,6 +3,7 @@ import type exampleConfig from "../config.example.json";
 
 // Test if config matches the shape of the config example at compile time
 const _invalidConfigError: typeof exampleConfig = config;
+const discordEnabled = config.discord.enable !== false;
 
 if (process.env.NODE_ENV === "development") {
 	const devConfig = {
@@ -20,6 +21,13 @@ if (
 	!config.secret_hmac ||
 	!config.collective.name ||
 	!URL.canParse(config.collective.site_url) ||
+	config.http.port < 1024
+) {
+	console.error("Invalid required config (secret_hmac, collective, http)");
+	process.exit(1);
+}
+
+if (discordEnabled && (
 	!config.discord.client_id ||
 	!config.discord.token ||
 	!config.discord.owner_id ||
@@ -27,10 +35,9 @@ if (
 	!config.discord.collective_channel_id ||
 	!Array.isArray(config.discord.admin_ids) ||
 	config.discord.admin_ids.some((id) => !id) ||
-	!config.discord.guild_id ||
-	config.http.port < 1024
-) {
-	console.error("Invalid required config (secret_hmac, collective, discord, http)");
+	!config.discord.guild_id
+)) {
+	console.error("Invalid required Discord config");
 	process.exit(1);
 }
 
@@ -48,5 +55,7 @@ if (!canUseYoutube) {
 export function siteUrl(url: string | { toString: () => string }): URL {
 	return new URL(url, config.collective.site_url);
 }
+
+export const isDiscordEnabled = discordEnabled;
 
 export default config;

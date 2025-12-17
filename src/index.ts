@@ -6,15 +6,22 @@ import { commands } from "./commands/index.js";
 import youtubeClient from "./oauth/youtube.js";
 import config from "./config.js";
 import DiscordInteractionError from "./DiscordInteractionError.js";
+import { handleHttpRequest } from "./server.js";
 
-const rest = new REST({ version: "10" }).setToken(config.discord.token);
+const discordDisabled = config.discord.enable === false;
+if (discordDisabled)
+    console.warn("Discord disabled – skipping Discord login/command registration. HTTP server will still run.\n\n");
 
-console.log("Started refreshing slash (/) commands.");
-await rest.put(
-    Routes.applicationCommands(config.discord.client_id),
-    { body: commands.map(c => c.data.toJSON()) satisfies RESTPutAPIApplicationCommandsJSONBody },
-);
-console.log(`Successfully refreshed slash (/) commands`);
+if (!discordDisabled) {
+    const rest = new REST({ version: "10" }).setToken(config.discord.token);
+
+    console.log("Started refreshing slash (/) commands.");
+    await rest.put(
+        Routes.applicationCommands(config.discord.client_id),
+        { body: commands.map((c) => c.data.toJSON()) satisfies RESTPutAPIApplicationCommandsJSONBody },
+    );
+    console.log("Successfully refreshed slash (/) commands");
+}
 
 export const discordClient = new Client({
     intents: [
@@ -23,8 +30,12 @@ export const discordClient = new Client({
 });
 
 async function sendToCollectiveChannel(options: MessageCreateOptions | string): Promise<Message<true>> {
-    const channel = await discordClient.channels.fetch(config.discord.collective_channel_id);
+    if (discordDisabled) {
+        console.warn("Discord disabled - skipping collective channel send.");
+        return undefined as unknown as Message<true>;
+    }
 
+    const channel = await discordClient.channels.fetch(config.discord.collective_channel_id);
     if (!channel?.isSendable() || channel.isDMBased()) {
         throw new Error("Invalid collective_channel_id");
     }
@@ -159,11 +170,18 @@ export async function respond(interaction: ChatInputCommandInteraction, options:
         : interaction.reply(options);
 }
 
-await discordClient.login(config.discord.token);
+if (!discordDisabled)
+    await discordClient.login(config.discord.token);
 
 const httpServer = createServer((request, response) => {
-    response.writeHead(404);
-    response.end();
+    void handleHttpRequest(request, response)
+        .catch((error) => {
+            console.error("HTTP handler error", error);
+            if (!response.headersSent)
+                response.writeHead(500, { "Content-Type": "application/json" });
+            if (!response.writableEnded)
+                response.end(JSON.stringify({ error: "Internal server error" }));
+        });
 });
 httpServer.listen(config.http.port, "localhost");
 
@@ -186,5 +204,8 @@ export async function shutdown() {
     }
 
     await new Promise((resolve) => httpServer.close(resolve));
-    await discordClient.destroy();
+    if (!discordDisabled)
+        await discordClient.destroy();
 }
+
+export { discordDisabled };

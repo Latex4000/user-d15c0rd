@@ -21,6 +21,11 @@ To delete the commands generated during development, run:
 npm run delete
 ```
 
+## HTTP-only development
+Set `discord.enable` to `false` in `config.json` and start the dev server as usual
+
+slash-command reg and discord login is skipped but local HTTP server will still boot basically so the [website](https://github.com/Latex4000/website) can still submit test payloads at http://localhost:<configured_http_port> (whatever you set in `config.http.port`).
+
 # Usage
 ```
 npm run build

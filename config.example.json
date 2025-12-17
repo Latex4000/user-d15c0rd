@@ -5,6 +5,7 @@
         "site_url": ""
     },
     "discord": {
+        "enable": true,
         "client_id": "",
         "token": "",
         "owner_id": "",

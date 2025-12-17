@@ -1,11 +1,9 @@
 import { ChatInputCommandInteraction, InteractionContextType, SlashCommandBuilder } from "discord.js";
 import { Command } from "./index.js";
-import AdmZip from "adm-zip";
-import { fetchHMAC } from "../fetch.js";
-import config, { siteUrl } from "../config.js";
-import { discordClient } from "../index.js";
 import confirm from "../confirm.js";
-import { Sight } from "../types/sight.js";
+import { respond } from "../index.js";
+import { submitSight } from "../thingSubmissions/sight.js";
+import { createWorkDir, cleanupWorkDir, downloadAttachmentToLocalFile } from "../commandUploads.js";
 
 const command: Command = {
     data: new SlashCommandBuilder()
@@ -58,71 +56,55 @@ const command: Command = {
         const images = interaction.options.getAttachment("images");
         const title = interaction.options.getString("title");
         const description = interaction.options.getString("description");
-        const tags = interaction.options.getString("tags");
-        const pixelated = interaction.options.getBoolean("is_pixel_art");
+        const tagsString = interaction.options.getString("tags") ?? "";
+        const tags = tagsString.length === 0 ? [] : tagsString.split(",").map((tag) => tag.trim()).filter((tag) => tag.length > 0);
+        const pixelated = interaction.options.getBoolean("is_pixel_art") ?? false;
         const hideColour = interaction.options.getBoolean("hide_colour") ?? false;
 
         // Check for missing required options
         if (!images || !title || !description) {
-            await interaction.followUp({ content: "You must provide at least images, a title, and a description", ephemeral: true });
+            await respond(interaction, { content: "You must provide at least images, a title, and a description", ephemeral: true });
             return;
         }
+
+        const infoConfirmed = await confirm(interaction, `Title: ${title}\nDescription: ${description}\nTags: ${tags.length > 0 ? tags.join(", ") : "N/A"}\n\nIs all of your information correct?`);
+        if (!infoConfirmed)
+            return;
 
         const ownWork = await confirm(interaction, "This is for content that you made yourself\nIs this your own work?");
         if (!ownWork)
             return;
 
-        const formData = new FormData();
-        formData.set("discord", interaction.user.id);
-        formData.set("title", title);
-        formData.set("description", description);
-        formData.set("pixelated", pixelated ? true : false);
-        formData.set("colour", !hideColour);
-        if (tags)
-            formData.set("tags", tags);
-
-        // Extract zip and append every single file data into "assets" form data key
-        const buffer = await fetch(images.url)
-            .then(res => res.arrayBuffer());
-
-        // Try extracting as zip first, if it fails, assume it's a single image
+        let workDir: string | null = null;
         try {
-            const zip = new AdmZip(Buffer.from(buffer));
-            const entries = zip.getEntries();
+            workDir = await createWorkDir("sight");
+            const assetFile = await downloadAttachmentToLocalFile(images, workDir, "assets");
 
-            for (const entry of entries) {
-                if (entry.isDirectory)
-                    throw new Error(`Zip file cannot contain directories. Please only include files, and reference them in the markdown file`);
-
-                const file = entry.getData();
-
-                formData.append("assets", new Blob([file]), entry.entryName);
-            }
-        } catch (e) {
-            if (formData.has("assets"))
-                throw e;
-
-            formData.append("assets", new Blob([buffer]), images.name);
-        }
-
-        if (!formData.has("assets")) {
-            await interaction.followUp({ content: "No images found", ephemeral: true });
-            return;
-        }
-
-        // Send form data to the server
-        await fetchHMAC<Sight>(siteUrl("/api/sights"), "POST", formData)
-            .then(async sight => {
-                discordClient.channels.fetch(config.discord.feed_channel_id)
-                    .then(async channel => {
-                        if (channel?.isSendable())
-                            await channel.send({ content: `<@${interaction.user.id}> uploaded a sight\n**Link:** ${config.collective.site_url}/sights` });
-                        else
-                            console.error("Failed to send message to feed channel: Channel is not sendable");
-                    })
-                    .catch(err => console.error("Failed to send message to feed channel", err));
-                await interaction.followUp({ content: `Image(s) uploaded successfully\n**Link:** ${siteUrl(`/sights`)}` });
+            const result = await submitSight({
+                memberDiscord: interaction.user.id,
+                title,
+                description,
+                tags,
+                pixelated,
+                showColour: !hideColour,
+                confirmInformation: infoConfirmed,
+                confirmOwnWork: true,
+                assets: [assetFile],
             });
+
+            await respond(interaction, {
+                content: `Image(s) uploaded successfully. Check ${result.sight.title} on the site soon!`,
+            });
+        } catch (error) {
+            const message = error instanceof Error ? error.message : "Unknown error";
+            await respond(interaction, {
+                content: `Failed to upload sight:\n\`\`\`\n${message}\n\`\`\``,
+                ephemeral: true,
+            });
+        } finally {
+            if (workDir)
+                await cleanupWorkDir(workDir);
+        }
     },
 }
 
