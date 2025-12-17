@@ -125,9 +125,10 @@ async function parseMultipart(req: IncomingMessage, canonicalUrl: string): Promi
         hmac.update(chunk);
     });
 
+    const reqEndPromise = once(req, "end");
     req.pipe(busboy);
     await once(busboy, "finish");
-    await once(req, "end");
+    await reqEndPromise;
     await validator.verifySignature(hmac.digest());
 
     return { fields, files, workDir };
@@ -192,6 +193,8 @@ export async function handleHttpRequest(req: IncomingMessage, res: ServerRespons
     const canonicalUrl = getCanonicalUrl(req);
     const url = new URL(canonicalUrl);
 
+    console.log(url.pathname);
+
     try {
         switch (url.pathname) {
             case "/things/actions": {
@@ -249,7 +252,9 @@ export async function handleHttpRequest(req: IncomingMessage, res: ServerRespons
                 return;
             }
             case "/things/sights": {
+                console.log("Processing sight submission");
                 const form = await parseMultipart(req, canonicalUrl);
+                console.log("Parsed multipart form");
                 const result = await withWorkDir(form, async () =>
                     submitSight({
                         memberDiscord: getField(form.fields, "discord")!,
