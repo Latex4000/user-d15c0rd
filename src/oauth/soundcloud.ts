@@ -58,7 +58,10 @@ export async function uploadSoundcloud(title: string, description: string, tags:
         body: formData,
     }).then(res => res.json() as Promise<{ id: number; permalink_url: string }>);
 
-    return `${res.permalink_url}?id=${res.id}`;
+    const permalinkUrl = new URL(res.permalink_url);
+    permalinkUrl.search = "";
+    permalinkUrl.hash = "";
+    return `${permalinkUrl.toString()}?id=${res.id}`;
 }
 
 export async function changeStatusSoundcloud(url: string, sharing: "public" | "private") {
