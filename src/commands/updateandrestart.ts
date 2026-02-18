@@ -38,8 +38,8 @@ const command: Command = {
 
             console.log("Running git pull");
             execFileSync("git", ["pull"], { stdio: "ignore" });
-            console.log("Running npm install");
-            execFileSync("npm", ["install"], { stdio: "ignore" });
+            console.log("Running npm ci");
+            execFileSync("npm", ["ci"], { stdio: "ignore" });
             console.log("Running npm run build");
             execFileSync("npm", ["run", "build"], { stdio: "ignore" });
         }
